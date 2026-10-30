@@ -1,0 +1,7 @@
+*.zip
+node_modules/
+.vscode/
+build/
+dist/
+*.log
+.local-docs/

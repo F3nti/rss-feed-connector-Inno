@@ -1,0 +1,83 @@
+{
+    "database": {
+        "init": [
+            {
+                "cmd": "table",
+                "name": "rss_feeds",
+                "init": [
+                    {
+                        "cmd": "column",
+                        "name": "id",
+                        "type": "BIGSERIAL PRIMARY KEY NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "name",
+                        "type": "VARCHAR(128) NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "url",
+                        "type": "TEXT NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "topic",
+                        "type": "VARCHAR(512) NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "tags",
+                        "type": "TEXT NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "interval_minutes",
+                        "type": "INTEGER NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "enabled",
+                        "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+                    }
+                ]
+            },
+            {
+                "cmd": "table",
+                "name": "rss_entries",
+                "init": [
+                    {
+                        "cmd": "column",
+                        "name": "id",
+                        "type": "BIGSERIAL PRIMARY KEY NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "feed_id",
+                        "type": "BIGINT NOT NULL"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "guid",
+                        "type": "TEXT NOT NULL"
+                    }
+                ]
+            }
+        ]
+    },
+    "javascript": {
+        "eval": [
+            "service/rss/rss-url-policy.js",
+            "service/rss/rss-downloader.js",
+            "service/rss/rss-parser.js",
+            "service/rss/html-builder.js",
+            "service/db/rss-entry-repository.js",
+            "service/db/rss-feed-repository.js",
+            "service/messages/services-client.js",
+            "service/messages/topic-discovery.js",
+            "service/messages/messages-client.js",
+            "service/scheduler/scheduler.js",
+            "service/rss-service.js"
+        ]
+    }
+}
