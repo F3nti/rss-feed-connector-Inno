@@ -88,6 +88,25 @@ function RssEntryRepository(database) {
         loadNextBatch();
     };
 
+    this.hasEntries = function (feedId, onSuccess, onError) {
+        if (!isValidFeedId(feedId)) {
+            throw new Error("RSS entry feed ID must be a positive integer");
+        }
+        requireCallbacks(onSuccess, onError);
+
+        execute(
+            "SELECT guid FROM rss_entries WHERE feed_id = " + feedId + " LIMIT 1",
+            function (rows) {
+                if (Object.prototype.toString.call(rows) !== "[object Array]") {
+                    onError("Database returned an invalid RSS entry existence result");
+                    return;
+                }
+                onSuccess(rows.length > 0);
+            },
+            onError
+        );
+    };
+
     this.save = function (feedId, guid, onSuccess, onError) {
         if (!isValidFeedId(feedId)) {
             throw new Error("RSS entry feed ID must be a positive integer");
@@ -110,6 +129,142 @@ function RssEntryRepository(database) {
             },
             onError
         );
+    };
+
+    this.saveMany = function (feedId, guids, onSuccess, onError) {
+        if (!isValidFeedId(feedId)) {
+            throw new Error("RSS entry feed ID must be a positive integer");
+        }
+        requireCallbacks(onSuccess, onError);
+        if (Object.prototype.toString.call(guids) !== "[object Array]") {
+            throw new Error("RSS entry GUIDs must be an array");
+        }
+        if (typeof database.transaction !== "function") {
+            onError("Database transactions are not available");
+            return;
+        }
+
+        var candidates = [];
+        var candidateSet = {};
+        guids.forEach(function (guid) {
+            if (typeof guid !== "string" || !guid.trim() || guid.length > 2048) {
+                throw new Error("RSS entry GUIDs must be non-empty strings up to 2048 characters");
+            }
+            var normalizedGuid = guid.trim();
+            var key = "$" + normalizedGuid;
+            if (!candidateSet[key]) {
+                candidateSet[key] = true;
+                candidates.push(normalizedGuid);
+            }
+        });
+
+        if (candidates.length === 0) {
+            onSuccess();
+            return;
+        }
+
+        var transaction;
+        var transactionStarted = false;
+        var finished = false;
+        var batchIndex = 0;
+        var batches = createBatches(candidates);
+        try {
+            transaction = database.transaction();
+            transaction.begin().oncomplete(function () {
+                transactionStarted = true;
+                insertNextBatch();
+            }).onerror(fail);
+        }
+        catch (error) {
+            fail(error);
+        }
+
+        function createBatches(values) {
+            var result = [];
+            var batch = [];
+            var prefix = "INSERT INTO rss_entries (feed_id, guid) VALUES ";
+            var length = prefix.length;
+            values.forEach(function (guid) {
+                var escaped = "'" + database.escape(guid) + "'";
+                var value = "(" + feedId + ", " + escaped + ")";
+                var separator = batch.length > 0 ? ", " : "";
+                if (batch.length > 0 &&
+                    (batch.length >= 100 || length + separator.length + value.length > 8192)) {
+                    result.push(batch);
+                    batch = [];
+                    length = prefix.length;
+                    separator = "";
+                }
+                if (length + separator.length + value.length > 8192) {
+                    throw new Error("RSS entry GUID is too long to save safely");
+                }
+                batch.push(value);
+                length += separator.length + value.length;
+            });
+            if (batch.length > 0) {
+                result.push(batch);
+            }
+            return result;
+        }
+
+        function insertNextBatch() {
+            if (batchIndex >= batches.length) {
+                try {
+                    transaction.commit()
+                        .oncomplete(function () {
+                            finished = true;
+                            onSuccess();
+                        })
+                        .onerror(fail);
+                }
+                catch (error) {
+                    fail(error);
+                }
+                return;
+            }
+
+            var query = "INSERT INTO rss_entries (feed_id, guid) VALUES " +
+                batches[batchIndex++].join(", ");
+            try {
+                transaction.exec(query)
+                    .oncomplete(insertNextBatch)
+                    .onerror(fail);
+            }
+            catch (error) {
+                fail(error);
+            }
+        }
+
+        function fail(error, errorText) {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            var message = errorText || error && error.message || error ||
+                "Database operation failed";
+            if (!transactionStarted) {
+                onError(String(message));
+                return;
+            }
+
+            try {
+                transaction.rollback()
+                    .oncomplete(function () {
+                        onError(String(message));
+                    })
+                    .onerror(function (rollbackError, rollbackText) {
+                        var rollbackMessage = rollbackText || rollbackError &&
+                            rollbackError.message || rollbackError ||
+                            "Database rollback failed";
+                        onError(String(message) + "; rollback failed: " +
+                            String(rollbackMessage));
+                    });
+            }
+            catch (rollbackError) {
+                onError(String(message) + "; rollback failed: " +
+                    (rollbackError.message || String(rollbackError)));
+            }
+        }
     };
 
     function execute(query, onSuccess, onError) {

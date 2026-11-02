@@ -22,6 +22,8 @@ topics. Administrators manage feeds from a myApps interface.
 - Poll feeds at configurable intervals between 1 and 1,440 minutes.
 - Parse RSS 2.0 and Atom entries, sanitize feed descriptions, and format
   Connect-compatible posts.
+- When a feed has no stored entry history, post at most the five newest entries
+  and record older entries as skipped to avoid a large backlog.
 - Persist feed configuration and posted entry GUIDs in the App Platform
   database so known entries remain deduplicated across service restarts.
 - Limit concurrent Messages API posts and batch database lookups for known
@@ -58,6 +60,11 @@ feeds are scheduled. A feed cycle downloads and parses the feed, skips
 previously posted GUIDs, and submits new entries as Messages API posts. The
 entry GUID is saved only after a successful `PostResult`.
 
+When a feed has no stored entry history and contains more than five entries,
+only the five newest by publication date are posted. Older entries are recorded
+as skipped, so they are not posted on the next poll. Deleting and recreating a
+feed clears its history and triggers this initial-feed behavior again.
+
 The last reported PBX trace confirmed an HTTP 200 Atom response and a cycle
 with 40 duplicates and no failures. That run did **not** contain a new entry,
 so it did not verify a new post end to end.
@@ -70,6 +77,8 @@ so it did not verify a new post end to end.
   App Platform database available.
 - A PBX App Object for this application with the Services API enabled and
   permission to connect to `messages-api`.
+- A Connect-enabled PBX environment with the Connect license/entitlement
+  required by the deployment's innovaphone release and licensing model.
 - An accessible Connect topic for every feed destination.
 - Outbound DNS and HTTP(S) connectivity from the App Platform runtime to the
   configured feed hosts.
@@ -159,6 +168,58 @@ Deployment checklist:
 6. Add a test feed containing a previously unseen GUID. Verify the resulting
    Connect post and successful `PostResult`, then confirm the next poll reports
    that entry as a duplicate.
+
+### App instance and PBX App Object URLs
+
+The App Platform instance and the PBX App Object use related, but different,
+paths. Configure the instance with a webserver path, for example:
+
+```text
+appdev/rss-feed-connector
+```
+
+The app is provided by that instance under the name `rss-feed-connector`, as
+declared in `apps.json`. In the PBX App Object, select the URL provided by this
+instance and point it to the app's start page. The resulting path should be:
+
+```text
+appdev/rss-feed-connector/rss-feed-connector.htm
+```
+
+These are relative path examples; the PBX supplies the scheme and host. Do not
+add `.htm` to the instance webserver path or to the app name in `apps.json`.
+The PBX App Object URL must resolve to the start `.htm` file; using only the
+path without `.htm` may return 404 instead of opening the app.
+
+### PBX App Object APIs, permissions, and Connect access
+
+Configure the PBX App Object used to launch the app with:
+
+- **AppWebsocket access** to the app service, as used by the myApps client to
+  exchange control messages with this app.
+- The **Services API** enabled. The service uses it to discover and authenticate
+  to another app service.
+- The service permission for **`messages-api`** granted to this App Object.
+  The service uses that permission to establish its authenticated connection;
+  without it, topic discovery and posting cannot work.
+- The App Object assigned to the intended users, so they can launch the app.
+
+The Messages API session must be able to access the destination Connect topics.
+If a topic is not returned by topic discovery, check Connect topic access and
+the identity/permissions used for the `messages-api` service connection.
+
+Connect must also be licensed/enabled on the PBX for the deployment's
+innovaphone release. This project does not define or check a separate
+`rss-feed-connector` App or Service license; whether a Connect license is
+required, and which license or entitlement applies, depends on the PBX version
+and deployment contract. Confirm that requirement with the PBX administrator
+or the applicable innovaphone licensing documentation.
+
+The app does not use a separate PBX **WebServices API** in its source code.
+Its browser UI uses the app's AppWebsocket connection, while its service uses
+the PBX Services API only for discovery and login to `messages-api`. Do not
+confuse the Services API permission with the `messages-api` service permission:
+both are needed for the service-to-service flow.
 
 The source is architecture-independent, but App Platform packaging is
 platform/version-specific. Do not copy a generated package from a different

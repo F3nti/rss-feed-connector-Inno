@@ -8,7 +8,16 @@ function MockDatabase() {
     this.exec = function (query) {
         this.queries.push(query);
         var rows;
-        if (query.indexOf("SELECT guid FROM rss_entries") === 0) {
+        if (query.indexOf("SELECT guid FROM rss_entries") === 0 &&
+            query.indexOf("LIMIT 1") !== -1) {
+            var existingFeedId = Number(/feed_id = (\d+)/.exec(query)[1]);
+            rows = this.rows.filter(function (row) {
+                return row.feedId === existingFeedId;
+            }).slice(0, 1).map(function (row) {
+                return { guid: row.guid };
+            });
+        }
+        else if (query.indexOf("SELECT guid FROM rss_entries") === 0) {
             var feedId = Number(/feed_id = (\d+)/.exec(query)[1]);
             var candidateSet = null;
             var inClause = / AND guid IN \((.*)\)$/.exec(query);
@@ -50,9 +59,73 @@ function MockDatabase() {
         };
         return operation;
     };
+    this.transaction = function () {
+        var database = this;
+        var pendingRows = [];
+        return {
+            begin: function () {
+                return createOperation(function () {});
+            },
+            exec: function (query) {
+                database.queries.push(query);
+                return createOperation(function () {
+                    var matcher = /\((\d+), '((?:''|[^'])*)'\)/g;
+                    var match;
+                    while ((match = matcher.exec(query))) {
+                        pendingRows.push({
+                            id: database.nextId++,
+                            feedId: Number(match[1]),
+                            guid: match[2].replace(/''/g, "'")
+                        });
+                    }
+                    return [];
+                });
+            },
+            commit: function () {
+                return createOperation(function () {
+                    database.rows = database.rows.concat(pendingRows);
+                });
+            },
+            rollback: function () {
+                return createOperation(function () {
+                    pendingRows = [];
+                });
+            }
+        };
+    };
     this.escape = function (value) {
         return String(value).replace(/'/g, "''");
     };
+
+    function createOperation(execute) {
+        var operation = {};
+        var complete;
+        var error;
+        var executed = false;
+        function run() {
+            if (executed || !complete || !error) {
+                return;
+            }
+            executed = true;
+            try {
+                complete(execute());
+            }
+            catch (exception) {
+                error(exception, exception.message);
+            }
+        }
+        operation.oncomplete = function (callback) {
+            complete = callback;
+            run();
+            return operation;
+        };
+        operation.onerror = function (callback) {
+            error = callback;
+            run();
+            return operation;
+        };
+        return operation;
+    }
 }
 
 var database = new MockDatabase();
@@ -65,6 +138,14 @@ repository.listKnown(7, [], function (entries) {
 });
 assert.deepStrictEqual(initialEntries, []);
 
+var hasEntries;
+repository.hasEntries(7, function (result) {
+    hasEntries = result;
+}, function (error) {
+    throw new Error(error);
+});
+assert.strictEqual(hasEntries, false);
+
 var insertedId;
 repository.save(7, "entry-'one", function (id) {
     insertedId = id;
@@ -72,7 +153,20 @@ repository.save(7, "entry-'one", function (id) {
     throw new Error(error);
 });
 assert.strictEqual(insertedId, 1);
-assert(database.queries[0].indexOf("'entry-''one'") !== -1);
+assert(database.queries.some(function (query) {
+    return query.indexOf("'entry-''one'") !== -1;
+}));
+
+var savedMany;
+repository.saveMany(7, ["ignored-'two", "ignored-three", "ignored-'two"], function () {
+    savedMany = true;
+}, function (error) {
+    throw new Error(error);
+});
+assert.strictEqual(savedMany, true);
+assert.strictEqual(database.rows.filter(function (row) {
+    return row.feedId === 7;
+}).length, 3);
 
 var otherFeedId;
 repository.save(8, "entry-two", function (id) {
@@ -80,7 +174,7 @@ repository.save(8, "entry-two", function (id) {
 }, function (error) {
     throw new Error(error);
 });
-assert.strictEqual(otherFeedId, 2);
+assert.strictEqual(otherFeedId, 4);
 
 var matchingEntries;
 repository.listKnown(7, ["entry-'one", "missing", "entry-'one"], function (entries) {
@@ -121,6 +215,13 @@ restartedRepository.listKnown(7, ["entry-'one"], function (entries) {
     throw new Error(error);
 });
 assert.deepStrictEqual(afterRestart, ["entry-'one"]);
+
+repository.hasEntries(7, function (result) {
+    hasEntries = result;
+}, function (error) {
+    throw new Error(error);
+});
+assert.strictEqual(hasEntries, true);
 
 var databaseError;
 var failingRepository = new RssEntryRepository({

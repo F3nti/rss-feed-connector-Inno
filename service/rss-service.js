@@ -13,6 +13,7 @@ var messagePostQueue = [];
 var pumpingMessagePosts = false;
 var messagePostPumpRequested = false;
 var maxConcurrentMessagePosts = 4;
+var initialPostLimit = 5;
 
 function safeLog(message) {
     if (typeof log === "function") {
@@ -608,10 +609,14 @@ function processEntries(entries, feed) {
                 candidateGuids.push(entry.guid);
             }
         });
-        repository.listKnown(feed.id, candidateGuids, function (knownGuids) {
-            postNewEntries(entries, feed, repository, knownGuids);
+        repository.hasEntries(feed.id, function (hasEntries) {
+            repository.listKnown(feed.id, candidateGuids, function (knownGuids) {
+                postNewEntries(entries, feed, repository, knownGuids, !hasEntries);
+            }, function (error) {
+                completeFeedCycle(feed, "error", "Could not load posted RSS entries: " + error);
+            });
         }, function (error) {
-            completeFeedCycle(feed, "error", "Could not load posted RSS entries: " + error);
+            completeFeedCycle(feed, "error", "Could not check RSS entry history: " + error);
         });
     }
     catch (error) {
@@ -619,9 +624,10 @@ function processEntries(entries, feed) {
     }
 }
 
-function postNewEntries(entries, feed, repository, knownGuids) {
+function postNewEntries(entries, feed, repository, knownGuids, isInitialRun) {
     var posted = 0;
     var duplicates = 0;
+    var skipped = 0;
     var failures = 0;
     var activePosts = 0;
     var nextEntry = 0;
@@ -643,7 +649,8 @@ function postNewEntries(entries, feed, repository, knownGuids) {
         completeFeedCycle(
             feed,
             failures > 0 ? "error" : "success",
-            posted + " posted, " + duplicates + " duplicates, " + failures + " failed"
+            posted + " posted, " + duplicates + " duplicates, " + skipped +
+                " older entries skipped, " + failures + " failed"
         );
     }
 
@@ -664,6 +671,62 @@ function postNewEntries(entries, feed, repository, knownGuids) {
             }
         }
     });
+
+    if (isInitialRun && newEntries.length > initialPostLimit) {
+        var orderedEntries = newEntries.map(function (entry, index) {
+            return {
+                entry: entry,
+                index: index,
+                published: Date.parse(entry.published || "")
+            };
+        }).sort(function (left, right) {
+            var leftHasDate = isFinite(left.published);
+            var rightHasDate = isFinite(right.published);
+
+            if (leftHasDate && rightHasDate && left.published !== right.published) {
+                return right.published - left.published;
+            }
+            if (leftHasDate !== rightHasDate) {
+                return leftHasDate ? -1 : 1;
+            }
+            return left.index - right.index;
+        });
+        var selectedGuids = {};
+        orderedEntries.slice(0, initialPostLimit).forEach(function (entry) {
+            selectedGuids["$" + entry.entry.guid] = true;
+        });
+        var ignoredGuids = [];
+        newEntries.forEach(function (entry) {
+            if (!selectedGuids["$" + entry.guid]) {
+                ignoredGuids.push(entry.guid);
+            }
+        });
+        var firstEntries = newEntries.filter(function (entry) {
+            return selectedGuids["$" + entry.guid] === true;
+        });
+
+        try {
+            repository.saveMany(feed.id, ignoredGuids, function () {
+                skipped = ignoredGuids.length;
+                newEntries = firstEntries;
+                pumpPosts();
+            }, function (error) {
+                completeFeedCycle(
+                    feed,
+                    "error",
+                    "Could not record older RSS entries as skipped: " + error
+                );
+            });
+        }
+        catch (error) {
+            completeFeedCycle(
+                feed,
+                "error",
+                "Could not record older RSS entries as skipped: " + error
+            );
+        }
+        return;
+    }
 
     function pumpPosts() {
         if (pumping) {

@@ -14,9 +14,15 @@ var feedEntries = [
 ];
 var database = createDatabase();
 
-function createDatabase() {
-    var rows = [];
-    var nextId = 1;
+function createDatabase(initialRows) {
+    var rows = (initialRows || []).map(function (row, index) {
+        return {
+            id: index + 1,
+            feedId: row.feedId,
+            guid: row.guid
+        };
+    });
+    var nextId = rows.length + 1;
     return {
         escape: function (value) {
             return String(value).replace(/'/g, "''");
@@ -53,18 +59,73 @@ function createDatabase() {
                 resultRows = [{ id: rows[rows.length - 1].id }];
             }
 
-            var operation = {
-                oncomplete: function (callback) {
-                    callback(resultRows);
-                    return operation;
+            return createOperation(function () {
+                return resultRows;
+            });
+        },
+        transaction: function () {
+            var pendingRows = [];
+            return {
+                begin: function () {
+                    return createOperation(function () {});
                 },
-                onerror: function () {
-                    return operation;
+                exec: function (query) {
+                    return createOperation(function () {
+                        var matcher = /\((\d+), '((?:''|[^'])*)'\)/g;
+                        var match;
+                        while ((match = matcher.exec(query))) {
+                            pendingRows.push({
+                                id: nextId++,
+                                feedId: Number(match[1]),
+                                guid: match[2].replace(/''/g, "'")
+                            });
+                        }
+                        return [];
+                    });
+                },
+                commit: function () {
+                    return createOperation(function () {
+                        rows = rows.concat(pendingRows);
+                    });
+                },
+                rollback: function () {
+                    return createOperation(function () {
+                        pendingRows = [];
+                    });
                 }
             };
-            return operation;
         }
     };
+
+    function createOperation(execute) {
+        var operation = {};
+        var complete;
+        var error;
+        var executed = false;
+        function run() {
+            if (executed || !complete || !error) {
+                return;
+            }
+            executed = true;
+            try {
+                complete(execute());
+            }
+            catch (exception) {
+                error(exception, exception.message);
+            }
+        }
+        operation.oncomplete = function (callback) {
+            complete = callback;
+            run();
+            return operation;
+        };
+        operation.onerror = function (callback) {
+            error = callback;
+            run();
+            return operation;
+        };
+        return operation;
+    }
 }
 
 function runServiceInstance(options) {
@@ -155,6 +216,35 @@ function runServiceInstance(options) {
 assert.strictEqual(runServiceInstance().length, 2);
 assert.strictEqual(runServiceInstance().length, 0);
 
+var initialHistoryEntries = [];
+for (var initialIndex = 0; initialIndex < 10; initialIndex++) {
+    initialHistoryEntries.push({
+        guid: "initial-entry-" + initialIndex,
+        title: "Initial entry " + initialIndex,
+        published: new Date(Date.UTC(2026, 0, initialIndex + 1)).toISOString()
+    });
+}
+initialHistoryEntries.reverse();
+var initialHistoryDatabase = createDatabase();
+var initialHistoryPosts = runServiceInstance({
+    database: initialHistoryDatabase,
+    entries: initialHistoryEntries
+});
+assert.strictEqual(initialHistoryPosts.length, 5);
+assert.deepStrictEqual(initialHistoryPosts.map(function (post) {
+    return post.title;
+}).sort(), [
+    "Initial entry 5",
+    "Initial entry 6",
+    "Initial entry 7",
+    "Initial entry 8",
+    "Initial entry 9"
+]);
+assert.strictEqual(runServiceInstance({
+    database: initialHistoryDatabase,
+    entries: initialHistoryEntries
+}).length, 0);
+
 var bulkEntries = [];
 for (var i = 0; i < 10; i++) {
     bulkEntries.push({
@@ -166,6 +256,10 @@ for (var i = 0; i < 10; i++) {
 var activePosts = 0;
 var maximumActivePosts = 0;
 var pendingPostCallbacks = [];
+var bulkDatabase = createDatabase([
+    { feedId: 1, guid: "previous-entry-feed-one" },
+    { feedId: 2, guid: "previous-entry-feed-two" }
+]);
 var bulkFeeds = [{
     id: 1,
     name: "Feed one",
@@ -184,7 +278,7 @@ var bulkFeeds = [{
     enabled: true
 }];
 var bulkPosts = runServiceInstance({
-    database: createDatabase(),
+    database: bulkDatabase,
     entries: bulkEntries,
     feeds: bulkFeeds,
     postHandler: function (message, onSuccess) {
