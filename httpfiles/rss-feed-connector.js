@@ -71,7 +71,7 @@
     function sendRequest(message, callback) {
         if (!connected) {
             showNotice("Die Verbindung zur App Platform ist nicht verfügbar.", "error");
-            return;
+            return false;
         }
         requestNumber++;
         var sourceId = "rss-ui-" + requestNumber;
@@ -82,10 +82,12 @@
         }
         try {
             appConnection.send(message);
+            return true;
         }
         catch (error) {
             delete pendingRequests[sourceId];
             showNotice("Anfrage konnte nicht gesendet werden: " + error, "error");
+            return false;
         }
     }
 
@@ -253,11 +255,42 @@
         actions.appendChild(makeButton("Bearbeiten", "button button-quiet", function () {
             editFeed(feed);
         }));
-        actions.appendChild(makeButton("Löschen", "button button-danger", function () {
-            if (window.confirm("Feed „" + feed.name + "“ wirklich löschen?")) {
-                sendRequest({ mt: "DeleteFeed", feedId: feed.id });
+        var deleteConfirmed = false;
+        var cancelDeleteButton;
+        var deleteButton = makeButton("Löschen", "button button-danger", function () {
+            if (!deleteConfirmed) {
+                deleteConfirmed = true;
+                deleteButton.textContent = "Löschen bestätigen";
+                cancelDeleteButton.hidden = false;
+                return;
             }
-        }));
+
+            deleteButton.disabled = true;
+            cancelDeleteButton.disabled = true;
+            var requestSent = sendRequest(
+                { mt: "DeleteFeed", feedId: feed.id },
+                function (response) {
+                    if (response.mt === "ApiError") {
+                        deleteButton.disabled = false;
+                        cancelDeleteButton.disabled = false;
+                        deleteButton.textContent = "Erneut versuchen";
+                    }
+                }
+            );
+            if (!requestSent) {
+                deleteButton.disabled = false;
+                cancelDeleteButton.disabled = false;
+            }
+        });
+        cancelDeleteButton = makeButton("Abbrechen", "button button-quiet", function () {
+            deleteConfirmed = false;
+            deleteButton.disabled = false;
+            deleteButton.textContent = "Löschen";
+            cancelDeleteButton.hidden = true;
+        });
+        cancelDeleteButton.hidden = true;
+        actions.appendChild(deleteButton);
+        actions.appendChild(cancelDeleteButton);
         card.appendChild(actions);
         return card;
     }

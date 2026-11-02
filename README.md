@@ -129,9 +129,9 @@ node --test test/*.test.js
 ```
 
 The test suite covers the URL policy and downloader, RSS and Atom parsing,
-database repositories, feed deduplication, service topic validation, scheduler
-behavior, Messages API communication, and myApps UI startup. The current
-release baseline passes all 11 test files.
+database repositories, feed deduplication and deletion, service topic
+validation, scheduler behavior, Messages API communication, and myApps UI
+startup. The current suite passes all 12 test files.
 
 The parser fixtures are `test/sample-rss.xml` and `test/sample-atom.xml`.
 Tests use local doubles for innovaphone APIs and do not require a live PBX or
