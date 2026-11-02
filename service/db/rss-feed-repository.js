@@ -1,6 +1,7 @@
 function RssFeedRepository(database) {
     if (!database || typeof database.exec !== "function" ||
-        typeof database.escape !== "function") {
+        typeof database.escape !== "function" ||
+        typeof database.transaction !== "function") {
         throw new Error("RssFeedRepository requires the App Platform Database API");
     }
 
@@ -61,18 +62,105 @@ function RssFeedRepository(database) {
     };
 
     this.remove = function (id, onSuccess, onError) {
-        execute(
-            "DELETE FROM rss_feeds WHERE id = " + id + " RETURNING id",
-            function (rows) {
-                if (Object.prototype.toString.call(rows) !== "[object Array]" ||
-                    rows.length > 1) {
-                    onError("Database returned an invalid feed delete result");
-                    return;
-                }
-                onSuccess(rows.length === 1);
-            },
-            onError
-        );
+        if (typeof id !== "number" || Math.floor(id) !== id || id < 1 ||
+            typeof onSuccess !== "function" || typeof onError !== "function") {
+            throw new Error("A valid feed ID and delete callbacks are required");
+        }
+
+        var transaction;
+        var transactionStarted = false;
+        var failed = false;
+        var completed = false;
+        try {
+            transaction = database.transaction();
+            transaction.begin().oncomplete(function () {
+                transactionStarted = true;
+                deleteEntries();
+            }).onerror(fail);
+        }
+        catch (error) {
+            fail(error);
+        }
+
+        function deleteEntries() {
+            executeTransaction(
+                "DELETE FROM rss_entries WHERE feed_id = " + id,
+                deleteFeedRow,
+                fail
+            );
+        }
+
+        function deleteFeedRow() {
+            executeTransaction(
+                "DELETE FROM rss_feeds WHERE id = " + id + " RETURNING id",
+                function (rows) {
+                    if (Object.prototype.toString.call(rows) !== "[object Array]" ||
+                        rows.length > 1) {
+                        fail("Database returned an invalid feed delete result");
+                        return;
+                    }
+                    try {
+                        transaction.commit()
+                            .oncomplete(function () {
+                                completed = true;
+                                onSuccess(rows.length === 1);
+                            })
+                            .onerror(fail);
+                    }
+                    catch (error) {
+                        fail(error);
+                    }
+                },
+                fail
+            );
+        }
+
+        function executeTransaction(query, onComplete, onError) {
+            try {
+                transaction.exec(query)
+                    .oncomplete(onComplete)
+                    .onerror(onError);
+            }
+            catch (error) {
+                onError(error);
+            }
+        }
+
+        function fail(error, errorText) {
+            if (failed || completed) {
+                return;
+            }
+            failed = true;
+
+            var message = errorText || error && error.message || error ||
+                "Database operation failed";
+            if (!transactionStarted) {
+                completed = true;
+                onError(String(message));
+                return;
+            }
+
+            try {
+                transaction.rollback()
+                    .oncomplete(function () {
+                        completed = true;
+                        onError(String(message));
+                    })
+                    .onerror(function (rollbackError, rollbackText) {
+                        completed = true;
+                        var rollbackMessage = rollbackText || rollbackError &&
+                            rollbackError.message || rollbackError ||
+                            "Database rollback failed";
+                        onError(String(message) + "; rollback failed: " +
+                            String(rollbackMessage));
+                    });
+            }
+            catch (rollbackError) {
+                completed = true;
+                onError(String(message) + "; rollback failed: " +
+                    (rollbackError.message || String(rollbackError)));
+            }
+        }
     };
 
     function sqlString(value) {

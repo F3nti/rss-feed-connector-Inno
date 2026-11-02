@@ -6,6 +6,7 @@ var serviceReady = false;
 var availableTopics = [];
 var feedSchedulers = {};
 var feedRuns = {};
+var deletingFeeds = {};
 var feedStatuses = {};
 var activeMessagePosts = 0;
 var messagePostQueue = [];
@@ -380,28 +381,50 @@ function deleteFeed(connection, request) {
         return;
     }
 
-    getFeedRepository().remove(id, function (removed) {
-        var key = "$" + id;
-        if (feedSchedulers[key]) {
-            feedSchedulers[key].scheduler.stop();
-            delete feedSchedulers[key];
-        }
-        delete feedStatuses[key];
-        refreshFeeds(function (error) {
-            if (error) {
-                sendApiError(connection, request.src, error);
-                return;
+    var key = "$" + id;
+    if (deletingFeeds[key]) {
+        sendApiError(connection, request.src, "Feed is already being deleted");
+        return;
+    }
+    if (feedRuns[key]) {
+        sendApiError(
+            connection,
+            request.src,
+            "Feed is currently running; try deleting it again after the cycle completes"
+        );
+        return;
+    }
+
+    deletingFeeds[key] = true;
+    try {
+        getFeedRepository().remove(id, function (removed) {
+            delete deletingFeeds[key];
+            if (feedSchedulers[key]) {
+                feedSchedulers[key].scheduler.stop();
+                delete feedSchedulers[key];
             }
-            sendApiMessage(connection, {
-                mt: "FeedDeleted",
-                src: request.src,
-                feedId: id,
-                removed: removed
+            delete feedStatuses[key];
+            refreshFeeds(function (error) {
+                if (error) {
+                    sendApiError(connection, request.src, error);
+                    return;
+                }
+                sendApiMessage(connection, {
+                    mt: "FeedDeleted",
+                    src: request.src,
+                    feedId: id,
+                    removed: removed
+                });
             });
+        }, function (error) {
+            delete deletingFeeds[key];
+            sendApiError(connection, request.src, error);
         });
-    }, function (error) {
-        sendApiError(connection, request.src, error);
-    });
+    }
+    catch (error) {
+        delete deletingFeeds[key];
+        sendApiError(connection, request.src, error.message || String(error));
+    }
 }
 
 function runFeedNow(connection, request) {
@@ -426,6 +449,10 @@ function runFeedNow(connection, request) {
         }
         if (!feed.enabled) {
             sendApiError(connection, request.src, "Feed is disabled");
+            return;
+        }
+        if (deletingFeeds["$" + id]) {
+            sendApiError(connection, request.src, "Feed is being deleted");
             return;
         }
         if (!serviceReady) {
@@ -528,6 +555,9 @@ function syncSchedulers(feeds) {
 
 function runFeedCycle(feed) {
     var key = "$" + feed.id;
+    if (deletingFeeds[key]) {
+        return;
+    }
     if (!serviceReady) {
         setFeedStatus(feed.id, "error", "Messages API connection is not ready");
         return;

@@ -3,6 +3,7 @@ var RssFeedRepository = require("../service/db/rss-feed-repository.js").RssFeedR
 
 function MockDatabase() {
     this.queries = [];
+    this.transactionQueries = [];
     this.rows = [{
         id: "4",
         name: "Security",
@@ -12,6 +13,8 @@ function MockDatabase() {
         interval_minutes: "30",
         enabled: true
     }];
+    this.entries = [];
+    this.failQuery = null;
     this.exec = function (query) {
         this.queries.push(query);
         var result = {};
@@ -38,6 +41,82 @@ function MockDatabase() {
     this.escape = function (value) {
         return String(value).replace(/'/g, "''");
     };
+    this.transaction = function () {
+        var database = this;
+        var rows = database.rows.slice();
+        var entries = database.entries.slice();
+        return {
+            begin: function () {
+                return createOperation(function () {});
+            },
+            exec: function (query) {
+                database.transactionQueries.push(query);
+                return createOperation(function () {
+                    if (database.failQuery &&
+                        query.indexOf(database.failQuery) !== -1) {
+                        throw new Error("Simulated database failure");
+                    }
+                    if (query.indexOf("DELETE FROM rss_entries") === 0) {
+                        var entryFeedId = Number(/feed_id = (\d+)/.exec(query)[1]);
+                        entries = entries.filter(function (entry) {
+                            return entry.feedId !== entryFeedId;
+                        });
+                        return [];
+                    }
+                    if (query.indexOf("DELETE FROM rss_feeds") === 0) {
+                        var feedId = Number(/id = (\d+)/.exec(query)[1]);
+                        var found = rows.some(function (row) {
+                            return Number(row.id) === feedId;
+                        });
+                        rows = rows.filter(function (row) {
+                            return Number(row.id) !== feedId;
+                        });
+                        return found ? [{ id: feedId }] : [];
+                    }
+                    throw new Error("Unexpected transaction query: " + query);
+                });
+            },
+            commit: function () {
+                return createOperation(function () {
+                    database.rows = rows;
+                    database.entries = entries;
+                });
+            },
+            rollback: function () {
+                return createOperation(function () {});
+            }
+        };
+    };
+
+    function createOperation(execute) {
+        var operation = {};
+        var complete;
+        var error;
+        var executed = false;
+        function run() {
+            if (executed || !complete || !error) {
+                return;
+            }
+            executed = true;
+            try {
+                complete(execute());
+            }
+            catch (exception) {
+                error(exception, exception.message);
+            }
+        }
+        operation.oncomplete = function (callback) {
+            complete = callback;
+            run();
+            return operation;
+        };
+        operation.onerror = function (callback) {
+            error = callback;
+            run();
+            return operation;
+        };
+        return operation;
+    }
 }
 
 var database = new MockDatabase();
@@ -77,12 +156,38 @@ assert(database.queries[1].indexOf("'Heise''s feed'") !== -1);
 assert(database.queries[1].indexOf("RETURNING id") !== -1);
 
 var removed;
+database.rows = [{ id: "11" }];
+database.entries = [
+    { feedId: 11, guid: "old-entry-1" },
+    { feedId: 11, guid: "old-entry-2" },
+    { feedId: 12, guid: "other-feed-entry" }
+];
 repository.remove(11, function (result) {
     removed = result;
 }, function (error) {
     throw new Error(error);
 });
 assert.strictEqual(removed, true);
+assert.deepStrictEqual(database.rows, []);
+assert.deepStrictEqual(database.entries, [{ feedId: 12, guid: "other-feed-entry" }]);
+assert.strictEqual(database.transactionQueries[0],
+    "DELETE FROM rss_entries WHERE feed_id = 11");
+assert.strictEqual(database.transactionQueries[1],
+    "DELETE FROM rss_feeds WHERE id = 11 RETURNING id");
+
+database.rows = [{ id: "12" }];
+database.entries = [{ feedId: 12, guid: "keep-this-entry" }];
+database.failQuery = "DELETE FROM rss_feeds";
+var deleteError;
+repository.remove(12, function () {
+    throw new Error("Failed feed deletion must not be reported as successful");
+}, function (error) {
+    deleteError = error;
+});
+assert.strictEqual(deleteError, "Simulated database failure");
+assert.deepStrictEqual(database.rows, [{ id: "12" }]);
+assert.deepStrictEqual(database.entries, [{ feedId: 12, guid: "keep-this-entry" }]);
+database.failQuery = null;
 
 database.rows = [{
     id: "5",
