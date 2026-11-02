@@ -254,6 +254,10 @@ button:focus-visible {
 
 .feed-card {
     padding: 20px 22px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    align-items: center;
+    gap: 20px 28px;
 }
 
 .feed-heading {
@@ -272,12 +276,50 @@ button:focus-visible {
     text-decoration: none;
 }
 
-.feed-meta,
-.feed-status {
+.feed-meta {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin: 16px 0 0;
+}
+
+.feed-status-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.feed-enabled {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: var(--success-bg);
+    color: var(--success-text);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.feed-enabled[data-enabled="false"] {
+    background: var(--surface-muted);
+    color: var(--muted);
+}
+
+.feed-status {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.feed-status-summary,
+.feed-last-run {
+    overflow-wrap: anywhere;
+}
+
+.feed-last-run {
+    font-size: 12px;
 }
 
 .meta-chip,
@@ -294,12 +336,6 @@ button:focus-visible {
     color: var(--brand-hover);
 }
 
-.feed-status {
-    align-items: baseline;
-    color: var(--muted);
-    font-size: 13px;
-}
-
 .feed-status[data-state="success"] {
     color: var(--success-text);
 }
@@ -311,7 +347,7 @@ button:focus-visible {
 .feed-actions {
     justify-content: flex-start;
     flex-wrap: wrap;
-    margin-top: 16px;
+    margin-top: 14px;
 }
 
 .empty-state {
@@ -374,8 +410,9 @@ button:focus-visible {
         padding: 18px;
     }
 
-    .feed-heading {
-        flex-direction: column;
+    .feed-card {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
     }
 }
 
@@ -550,7 +587,17 @@ button:focus-visible {
 }
 
 :root[data-scheme="dark"] .feed-status {
-    margin-top: 12px;
+    margin-top: 2px;
+}
+
+:root[data-scheme="dark"] .feed-enabled {
+    background: #104c45;
+    color: #76e3d1;
+}
+
+:root[data-scheme="dark"] .feed-enabled[data-enabled="false"] {
+    background: #202020;
+    color: #d0d0d0;
 }
 
 :root[data-scheme="dark"] .empty-state {

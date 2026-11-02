@@ -202,26 +202,23 @@
         var card = document.createElement("article");
         card.className = "feed-card";
 
+        var details = document.createElement("div");
+        details.className = "feed-details";
         var heading = document.createElement("div");
         heading.className = "feed-heading";
-        var details = document.createElement("div");
+        var headingDetails = document.createElement("div");
         var name = document.createElement("h3");
         name.textContent = feed.name;
-        details.appendChild(name);
+        headingDetails.appendChild(name);
         var url = document.createElement("a");
         url.className = "feed-url";
         url.href = feed.url;
         url.target = "_blank";
         url.rel = "noopener noreferrer";
         url.textContent = feed.url;
-        details.appendChild(url);
-        heading.appendChild(details);
-
-        var enabled = document.createElement("span");
-        enabled.className = "meta-chip";
-        enabled.textContent = feed.enabled ? "Aktiv" : "Pausiert";
-        heading.appendChild(enabled);
-        card.appendChild(heading);
+        headingDetails.appendChild(url);
+        heading.appendChild(headingDetails);
+        details.appendChild(heading);
 
         var meta = document.createElement("div");
         meta.className = "feed-meta";
@@ -233,17 +230,35 @@
             tagElement.textContent = "#" + tag;
             meta.appendChild(tagElement);
         });
-        card.appendChild(meta);
+        details.appendChild(meta);
+        card.appendChild(details);
 
-        var statusLine = document.createElement("p");
-        statusLine.className = "feed-status";
-        statusLine.setAttribute("data-state", status ? status.state : "waiting");
+        var controls = document.createElement("div");
+        controls.className = "feed-controls";
+        var statusHeader = document.createElement("div");
+        statusHeader.className = "feed-status-header";
+        var enabled = document.createElement("span");
+        enabled.className = "feed-enabled";
+        enabled.setAttribute("data-enabled", feed.enabled ? "true" : "false");
+        enabled.textContent = feed.enabled ? "Aktiv" : "Pausiert";
+        statusHeader.appendChild(enabled);
+
+        var statusDetails = document.createElement("div");
+        statusDetails.className = "feed-status";
+        statusDetails.setAttribute("data-state", status ? status.state : "waiting");
         var statusText = status ? status.summary : "Wartet auf den ersten Abruf";
+        var summary = document.createElement("span");
+        summary.className = "feed-status-summary";
+        summary.textContent = statusText;
+        statusDetails.appendChild(summary);
         if (status && status.lastRun) {
-            statusText += " · " + status.lastRun;
+            var lastRun = document.createElement("span");
+            lastRun.className = "feed-last-run";
+            lastRun.textContent = "Letzter Abruf: " + status.lastRun;
+            statusDetails.appendChild(lastRun);
         }
-        statusLine.textContent = "Status: " + statusText;
-        card.appendChild(statusLine);
+        statusHeader.appendChild(statusDetails);
+        controls.appendChild(statusHeader);
 
         var actions = document.createElement("div");
         actions.className = "feed-actions";
@@ -291,7 +306,8 @@
         cancelDeleteButton.hidden = true;
         actions.appendChild(deleteButton);
         actions.appendChild(cancelDeleteButton);
-        card.appendChild(actions);
+        controls.appendChild(actions);
+        card.appendChild(controls);
         return card;
     }
 

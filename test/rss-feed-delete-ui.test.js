@@ -127,12 +127,30 @@ connection.onmessage({
         intervalMinutes: 15,
         enabled: true
     }],
-    statuses: {}
+    statuses: {
+        "7": {
+            state: "success",
+            summary: "1 posted, 2 duplicates, 0 failed",
+            lastRun: "2026-11-02T08:30:00.000Z"
+        }
+    }
 });
 
-var buttons = elements["feed-list"].children[0].children.filter(function (child) {
-    return child.tagName === "div";
-}).pop().children;
+var card = elements["feed-list"].children[0];
+assert.strictEqual(card.children[0].className, "feed-details");
+assert.strictEqual(card.children[1].className, "feed-controls");
+var controls = card.children[1];
+var statusHeader = controls.children[0];
+assert.strictEqual(statusHeader.children[0].textContent, "Aktiv");
+assert.strictEqual(
+    statusHeader.children[1].children[0].textContent,
+    "1 posted, 2 duplicates, 0 failed"
+);
+assert.strictEqual(
+    statusHeader.children[1].children[1].textContent,
+    "Letzter Abruf: 2026-11-02T08:30:00.000Z"
+);
+var buttons = controls.children[1].children;
 var deleteButton = buttons.filter(function (button) {
     return button.textContent === "Löschen";
 })[0];
