@@ -12,6 +12,15 @@ assert.strictEqual(icon.readUInt32BE(20), 100);
 assert.deepStrictEqual(icon, fs.readFileSync(
     path.join(__dirname, "..", "httpfiles", "rss-connect-icon.png")
 ));
+var appLogo = fs.readFileSync(path.join(
+    __dirname,
+    "..",
+    "httpfiles",
+    "rss-connect-logo.png"
+));
+assert.strictEqual(appLogo.readUInt32BE(0), 0x89504e47);
+assert.strictEqual(appLogo.readUInt32BE(16), 512);
+assert.strictEqual(appLogo.readUInt32BE(20), 512);
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "build.txt"), "utf8").trim(),
     "3"
@@ -27,6 +36,7 @@ var html = fs.readFileSync(
 );
 assert(html.indexOf('src="web1/lib1/innovaphone.lib1.js"') !== -1);
 assert(html.indexOf('src="web1/appwebsocket/innovaphone.appwebsocket.Connection.js"') !== -1);
+assert(html.indexOf('src="rss-connect-logo.png"') !== -1);
 assert(fs.existsSync(path.join(__dirname, "..", "httpfiles", "web1", "lib1", "innovaphone.lib1.js")));
 assert(fs.existsSync(path.join(
     __dirname,
