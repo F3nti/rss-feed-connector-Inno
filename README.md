@@ -59,6 +59,11 @@ After the Messages API connects and the configured topic is confirmed, enabled
 feeds are scheduled. A feed cycle downloads and parses the feed, skips
 previously posted GUIDs, and submits new entries as Messages API posts. The
 entry GUID is saved only after a successful `PostResult`.
+If the post succeeds but saving its GUID fails, the service retries the
+database save up to two additional times (after 500 ms and 1.5 s). It does not
+repost the message during these retries. If all attempts fail, the cycle is
+reported as an error so the GUID can be retried on a later feed run; this
+remaining failure case can result in the entry being posted again.
 
 When a feed has no stored entry history, its initial-post setting controls the
 first run. By default, only the five newest entries by publication date are

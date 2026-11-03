@@ -23,12 +23,21 @@ function createDatabase(initialRows) {
         };
     });
     var nextId = rows.length + 1;
-    return {
+    var failedEntrySavesRemaining = 0;
+    var entrySaveAttempts = 0;
+    var database = {
+        failNextEntrySaves: function (count) {
+            failedEntrySavesRemaining = count;
+        },
+        getEntrySaveAttempts: function () {
+            return entrySaveAttempts;
+        },
         escape: function (value) {
             return String(value).replace(/'/g, "''");
         },
         exec: function (query) {
-            var resultRows;
+            var resultRows = [];
+            var insertValues = null;
             if (query.indexOf("SELECT guid FROM rss_entries") === 0) {
                 var feedId = Number(/feed_id = (\d+)/.exec(query)[1]);
                 var candidateSet = null;
@@ -49,17 +58,24 @@ function createDatabase(initialRows) {
                 });
             }
             else {
-                var values = /VALUES \((\d+), '((?:''|[^'])*)'\)/.exec(query);
-                assert(values, "Unexpected RSS entry database query: " + query);
-                rows.push({
-                    id: nextId++,
-                    feedId: Number(values[1]),
-                    guid: values[2].replace(/''/g, "'")
-                });
-                resultRows = [{ id: rows[rows.length - 1].id }];
+                insertValues = /VALUES \((\d+), '((?:''|[^'])*)'\)/.exec(query);
+                assert(insertValues, "Unexpected RSS entry database query: " + query);
             }
 
             return createOperation(function () {
+                if (insertValues) {
+                    entrySaveAttempts++;
+                    if (failedEntrySavesRemaining > 0) {
+                        failedEntrySavesRemaining--;
+                        throw new Error("Simulated database unavailable");
+                    }
+                    rows.push({
+                        id: nextId++,
+                        feedId: Number(insertValues[1]),
+                        guid: insertValues[2].replace(/''/g, "'")
+                    });
+                    resultRows = [{ id: rows[rows.length - 1].id }];
+                }
                 return resultRows;
             });
         },
@@ -126,11 +142,15 @@ function createDatabase(initialRows) {
         };
         return operation;
     }
+
+    return database;
 }
 
 function runServiceInstance(options) {
     options = options || {};
     var posts = [];
+    var retryDelays = [];
+    var logs = [];
     var instanceDatabase = options.database || database;
     var instanceEntries = options.entries || feedEntries;
 
@@ -209,9 +229,24 @@ function runServiceInstance(options) {
             return modules[modulePath];
         },
         Database: instanceDatabase,
-        log: function () {}
+        Timers: {
+            setTimeout: function (callback, delay) {
+                if (options.retryTimerError) {
+                    throw new Error(options.retryTimerError);
+                }
+                retryDelays.push(delay);
+                callback();
+                return retryDelays.length;
+            },
+            clearTimeout: function () {}
+        },
+        log: function (message) {
+            logs.push(message);
+        }
     });
 
+    posts.retryDelays = retryDelays;
+    posts.logs = logs;
     return posts;
 }
 
@@ -354,5 +389,62 @@ new RssEntryRepository(database).listKnown(
     }
 );
 assert.deepStrictEqual(persistedEntries, ["stable-entry-1", "stable-entry-2"]);
+
+var retryDatabase = createDatabase();
+retryDatabase.failNextEntrySaves(2);
+var retriedSavePosts = runServiceInstance({
+    database: retryDatabase,
+    entries: [feedEntries[0]]
+});
+assert.strictEqual(retriedSavePosts.length, 1);
+assert.deepStrictEqual(retriedSavePosts.retryDelays, [500, 1500]);
+assert.strictEqual(retryDatabase.getEntrySaveAttempts(), 3);
+var retriedGuid;
+new RssEntryRepository(retryDatabase).listKnown(
+    1,
+    [feedEntries[0].guid],
+    function (entries) {
+        retriedGuid = entries;
+    },
+    function (error) {
+        throw new Error(error);
+    }
+);
+assert.deepStrictEqual(retriedGuid, [feedEntries[0].guid]);
+assert.strictEqual(runServiceInstance({
+    database: retryDatabase,
+    entries: [feedEntries[0]]
+}).length, 0);
+
+var failedSaveDatabase = createDatabase();
+failedSaveDatabase.failNextEntrySaves(3);
+var failedSavePosts = runServiceInstance({
+    database: failedSaveDatabase,
+    entries: [feedEntries[0]]
+});
+assert.strictEqual(failedSavePosts.length, 1);
+assert.deepStrictEqual(failedSavePosts.retryDelays, [500, 1500]);
+assert.strictEqual(failedSaveDatabase.getEntrySaveAttempts(), 3);
+assert(failedSavePosts.logs.some(function (message) {
+    return message.indexOf("could not be recorded after 3 attempts") !== -1;
+}));
+assert.strictEqual(runServiceInstance({
+    database: failedSaveDatabase,
+    entries: [feedEntries[0]]
+}).length, 1);
+
+var unavailableRetryTimerDatabase = createDatabase();
+unavailableRetryTimerDatabase.failNextEntrySaves(1);
+var unavailableRetryTimerPosts = runServiceInstance({
+    database: unavailableRetryTimerDatabase,
+    entries: [feedEntries[0]],
+    retryTimerError: "Retry timer unavailable"
+});
+assert.strictEqual(unavailableRetryTimerPosts.length, 1);
+assert.strictEqual(unavailableRetryTimerDatabase.getEntrySaveAttempts(), 1);
+assert(unavailableRetryTimerPosts.logs.some(function (message) {
+    return message.indexOf("retry could not be scheduled") !== -1 &&
+        message.indexOf("Retry timer unavailable") !== -1;
+}));
 
 console.log("RSS service restart deduplication tests passed");

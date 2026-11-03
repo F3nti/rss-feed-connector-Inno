@@ -15,6 +15,8 @@ var messagePostPumpRequested = false;
 var maxConcurrentMessagePosts = 4;
 var defaultInitialPostLimit = 5;
 var maximumInitialPostLimit = 50;
+var maximumGuidSaveAttempts = 3;
+var guidSaveRetryDelays = [500, 1500];
 
 function safeLog(message) {
     if (typeof log === "function") {
@@ -795,16 +797,7 @@ function postNewEntries(entries, feed, repository, knownGuids, isInitialRun) {
                     text: htmlBuilder.build(entry),
                     tags: feed.tags
                 }, function () {
-                    try {
-                        repository.save(feed.id, entry.guid, function () {
-                            completePost(null, true);
-                        }, function (error) {
-                            completePost("post succeeded but its GUID could not be recorded: " + error, true);
-                        });
-                    }
-                    catch (error) {
-                        completePost("post succeeded but its GUID could not be recorded: " + error, true);
-                    }
+                    savePostedEntryGuid(1);
                 }, function (error) {
                     completePost(error, false);
                 });
@@ -818,6 +811,46 @@ function postNewEntries(entries, feed, repository, knownGuids, isInitialRun) {
             safeLog("RSS entry could not be queued (" + entry.guid + "): " + error);
             pumpPosts();
         });
+
+        function savePostedEntryGuid(attempt) {
+            try {
+                repository.save(feed.id, entry.guid, function () {
+                    completePost(null, true);
+                }, function (error) {
+                    retryOrCompleteGuidSave(attempt, error);
+                });
+            }
+            catch (error) {
+                retryOrCompleteGuidSave(attempt, error.message || String(error));
+            }
+        }
+
+        function retryOrCompleteGuidSave(attempt, error) {
+            if (attempt >= maximumGuidSaveAttempts) {
+                completePost(
+                    "post succeeded but its GUID could not be recorded after " +
+                        attempt + " attempts: " + error,
+                    true
+                );
+                return;
+            }
+
+            var delay = guidSaveRetryDelays[attempt - 1];
+            try {
+                setRetryTimer(function () {
+                    savePostedEntryGuid(attempt + 1);
+                }, delay);
+            }
+            catch (timerError) {
+                completePost(
+                    "post succeeded but its GUID could not be recorded after " +
+                        attempt + " attempt(s); retry could not be scheduled: " +
+                        (timerError.message || String(timerError)) +
+                        "; last database error: " + error,
+                    true
+                );
+            }
+        }
     }
 
     pumpPosts();
@@ -900,6 +933,17 @@ function sendApiMessage(connection, message) {
     catch (error) {
         safeLog("Could not send RSS control API response: " + error);
     }
+}
+
+function setRetryTimer(callback, delay) {
+    if (typeof Timers !== "undefined" &&
+        Timers && typeof Timers.setTimeout === "function") {
+        return Timers.setTimeout(callback, delay);
+    }
+    if (typeof setTimeout === "function") {
+        return setTimeout(callback, delay);
+    }
+    throw new Error("Timers.setTimeout is not available");
 }
 
 start();
