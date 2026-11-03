@@ -39,6 +39,16 @@
                         "cmd": "column",
                         "name": "enabled",
                         "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "initial_post_limit",
+                        "type": "INTEGER NOT NULL DEFAULT 5"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "initial_post_all",
+                        "type": "BOOLEAN NOT NULL DEFAULT FALSE"
                     }
                 ]
             },

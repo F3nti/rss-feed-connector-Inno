@@ -32,6 +32,7 @@ var html = fs.readFileSync(
     path.join(__dirname, "..", "httpfiles", "rss-feed-connector.htm"),
     "utf8"
 );
+assert(html.indexOf('id="feed-enabled"') < html.indexOf('id="feed-initial-post-all"'));
 assert(html.indexOf('src="web1/lib1/innovaphone.lib1.js"') !== -1);
 assert(html.indexOf('src="web1/appwebsocket/innovaphone.appwebsocket.Connection.js"') !== -1);
 assert(html.indexOf('src="rss-connect-logo.svg"') !== -1);
@@ -63,11 +64,16 @@ var topicOptions = [];
     "feed-url",
     "feed-tags",
     "feed-interval",
+    "feed-initial-post-limit",
+    "feed-initial-post-all",
     "feed-enabled",
     "form-heading"
 ].forEach(function (id) {
     elements[id] = {
-        addEventListener: function () {},
+        listeners: {},
+        addEventListener: function (name, callback) {
+            this.listeners[name] = callback;
+        },
         setAttribute: function () {},
         removeAttribute: function () {},
         getAttribute: function () { return ""; },
@@ -79,7 +85,8 @@ var topicOptions = [];
         value: "",
         firstChild: null,
         hidden: false,
-        disabled: false
+        disabled: false,
+        checked: false
     };
 });
 elements["feed-topic"].appendChild = function (option) {
@@ -191,6 +198,21 @@ assert.deepStrictEqual(topicOptions.map(function (option) { return option.value;
 ]);
 assert.strictEqual(elements["feed-topic"].disabled, false);
 assert.strictEqual(elements["save-feed"].disabled, false);
+elements["feed-name"].value = "Test feed";
+elements["feed-url"].value = "https://example.com/feed.xml";
+elements["feed-interval"].value = "15";
+elements["feed-initial-post-limit"].value = "7";
+elements["feed-initial-post-all"].checked = true;
+elements["feed-initial-post-all"].listeners.change.call(
+    elements["feed-initial-post-all"]
+);
+assert.strictEqual(elements["feed-initial-post-limit"].disabled, true);
+elements["feed-form"].listeners.submit({
+    preventDefault: function () {}
+});
+assert.strictEqual(sentMessages[1].mt, "SaveFeed");
+assert.strictEqual(sentMessages[1].feed.initialPostLimit, 7);
+assert.strictEqual(sentMessages[1].feed.initialPostAll, true);
 createdConnection.onmessage({
     mt: "State",
     topics: [

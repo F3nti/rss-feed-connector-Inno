@@ -7,7 +7,8 @@ function RssFeedRepository(database) {
 
     this.list = function (onSuccess, onError) {
         execute(
-            "SELECT id, name, url, topic, tags, interval_minutes, enabled " +
+            "SELECT id, name, url, topic, tags, interval_minutes, enabled, " +
+            "initial_post_limit, initial_post_all " +
             "FROM rss_feeds ORDER BY id",
             function (rows) {
                 try {
@@ -31,13 +32,16 @@ function RssFeedRepository(database) {
             sqlString(feed.topic),
             sqlString(JSON.stringify(feed.tags)),
             String(feed.intervalMinutes),
-            feed.enabled ? "TRUE" : "FALSE"
+            feed.enabled ? "TRUE" : "FALSE",
+            String(feed.initialPostLimit),
+            feed.initialPostAll ? "TRUE" : "FALSE"
         ];
         var query;
 
         if (feed.id === null) {
             query = "INSERT INTO rss_feeds " +
-                "(name, url, topic, tags, interval_minutes, enabled) VALUES (" +
+                "(name, url, topic, tags, interval_minutes, enabled, " +
+                "initial_post_limit, initial_post_all) VALUES (" +
                 values.join(", ") + ") RETURNING id";
         }
         else {
@@ -47,6 +51,8 @@ function RssFeedRepository(database) {
                 ", tags = " + values[3] +
                 ", interval_minutes = " + values[4] +
                 ", enabled = " + values[5] +
+                ", initial_post_limit = " + values[6] +
+                ", initial_post_all = " + values[7] +
                 " WHERE id = " + feed.id +
                 " RETURNING id";
         }
@@ -199,7 +205,10 @@ function RssFeedRepository(database) {
             topic: row.topic,
             tags: tags,
             intervalMinutes: Number(row.interval_minutes),
-            enabled: row.enabled === true || row.enabled === "true"
+            enabled: row.enabled === true || row.enabled === "true",
+            initialPostLimit: Number(row.initial_post_limit || 5),
+            initialPostAll: row.initial_post_all === true ||
+                row.initial_post_all === "true"
         };
     }
 }

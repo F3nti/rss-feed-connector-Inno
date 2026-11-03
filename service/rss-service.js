@@ -13,7 +13,8 @@ var messagePostQueue = [];
 var pumpingMessagePosts = false;
 var messagePostPumpRequested = false;
 var maxConcurrentMessagePosts = 4;
-var initialPostLimit = 5;
+var defaultInitialPostLimit = 5;
+var maximumInitialPostLimit = 50;
 
 function safeLog(message) {
     if (typeof log === "function") {
@@ -343,6 +344,18 @@ function validateFeed(value) {
     if (Math.floor(interval) !== interval || interval < 1 || interval > 1440) {
         throw new Error("Poll interval must be between 1 and 1440 minutes");
     }
+    var initialPostLimit = value.initialPostLimit === null ||
+        typeof value.initialPostLimit === "undefined"
+        ? defaultInitialPostLimit
+        : Number(value.initialPostLimit);
+    if (Math.floor(initialPostLimit) !== initialPostLimit ||
+        initialPostLimit < 1 || initialPostLimit > maximumInitialPostLimit) {
+        throw new Error("Initial post limit must be between 1 and 50");
+    }
+    if (typeof value.initialPostAll !== "undefined" &&
+        typeof value.initialPostAll !== "boolean") {
+        throw new Error("Load all initial feed entries must be a boolean");
+    }
     if (Object.prototype.toString.call(value.tags) !== "[object Array]" ||
         value.tags.length > 20) {
         throw new Error("Feed tags must be an array with no more than 20 tags");
@@ -371,7 +384,9 @@ function validateFeed(value) {
         topic: topic,
         tags: tags,
         intervalMinutes: interval,
-        enabled: value.enabled !== false
+        enabled: value.enabled !== false,
+        initialPostLimit: initialPostLimit,
+        initialPostAll: value.initialPostAll === true
     };
 }
 
@@ -649,8 +664,9 @@ function postNewEntries(entries, feed, repository, knownGuids, isInitialRun) {
         completeFeedCycle(
             feed,
             failures > 0 ? "error" : "success",
-            posted + " posted, " + duplicates + " duplicates, " + skipped +
-                " older entries skipped, " + failures + " failed"
+            posted + " posted, " + duplicates + " duplicates, " +
+                (skipped ? skipped + " older entries skipped, " : "") +
+                failures + " failed"
         );
     }
 
@@ -672,7 +688,8 @@ function postNewEntries(entries, feed, repository, knownGuids, isInitialRun) {
         }
     });
 
-    if (isInitialRun && newEntries.length > initialPostLimit) {
+    if (isInitialRun && !feed.initialPostAll &&
+        newEntries.length > feed.initialPostLimit) {
         var orderedEntries = newEntries.map(function (entry, index) {
             return {
                 entry: entry,
@@ -692,7 +709,7 @@ function postNewEntries(entries, feed, repository, knownGuids, isInitialRun) {
             return left.index - right.index;
         });
         var selectedGuids = {};
-        orderedEntries.slice(0, initialPostLimit).forEach(function (entry) {
+        orderedEntries.slice(0, feed.initialPostLimit).forEach(function (entry) {
             selectedGuids["$" + entry.entry.guid] = true;
         });
         var ignoredGuids = [];

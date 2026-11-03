@@ -22,8 +22,8 @@ topics. Administrators manage feeds from a myApps interface.
 - Poll feeds at configurable intervals between 1 and 1,440 minutes.
 - Parse RSS 2.0 and Atom entries, sanitize feed descriptions, and format
   Connect-compatible posts.
-- When a feed has no stored entry history, post at most the five newest entries
-  and record older entries as skipped to avoid a large backlog.
+- Configure each feed's first-run backlog: post a chosen number of newest
+  entries (1–50, default 5) or explicitly load all entries.
 - Persist feed configuration and posted entry GUIDs in the App Platform
   database so known entries remain deduplicated across service restarts.
 - Limit concurrent Messages API posts and batch database lookups for known
@@ -60,10 +60,13 @@ feeds are scheduled. A feed cycle downloads and parses the feed, skips
 previously posted GUIDs, and submits new entries as Messages API posts. The
 entry GUID is saved only after a successful `PostResult`.
 
-When a feed has no stored entry history and contains more than five entries,
-only the five newest by publication date are posted. Older entries are recorded
-as skipped, so they are not posted on the next poll. Deleting and recreating a
-feed clears its history and triggers this initial-feed behavior again.
+When a feed has no stored entry history, its initial-post setting controls the
+first run. By default, only the five newest entries by publication date are
+posted. Choose a limit from 1 to 50, or enable **Alle vorhandenen Beiträge
+laden** to post every entry returned by the feed. Entries older than the
+selected limit are recorded as skipped, so they are not posted on the next
+poll. Deleting and recreating a feed clears its history and triggers this
+initial-feed behavior again.
 
 The last reported PBX trace confirmed an HTTP 200 Atom response and a cycle
 with 40 duplicates and no failures. That run did **not** contain a new entry,

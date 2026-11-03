@@ -165,7 +165,9 @@ function runServiceInstance(options) {
             topic: "connect?test",
             tags: [],
             intervalMinutes: 15,
-            enabled: true
+            enabled: true,
+            initialPostLimit: 5,
+            initialPostAll: false
         }]);
     };
 
@@ -244,6 +246,47 @@ assert.strictEqual(runServiceInstance({
     database: initialHistoryDatabase,
     entries: initialHistoryEntries
 }).length, 0);
+
+var customInitialLimitPosts = runServiceInstance({
+    database: createDatabase(),
+    entries: initialHistoryEntries,
+    feeds: [{
+        id: 1,
+        name: "Custom limit feed",
+        url: "https://example.com/feed.xml",
+        topic: "connect?test",
+        tags: [],
+        intervalMinutes: 15,
+        enabled: true,
+        initialPostLimit: 3,
+        initialPostAll: false
+    }]
+});
+assert.strictEqual(customInitialLimitPosts.length, 3);
+assert.deepStrictEqual(customInitialLimitPosts.map(function (post) {
+    return post.title;
+}).sort(), [
+    "Initial entry 7",
+    "Initial entry 8",
+    "Initial entry 9"
+]);
+
+var loadAllInitialPosts = runServiceInstance({
+    database: createDatabase(),
+    entries: initialHistoryEntries,
+    feeds: [{
+        id: 1,
+        name: "Load all feed",
+        url: "https://example.com/feed.xml",
+        topic: "connect?test",
+        tags: [],
+        intervalMinutes: 15,
+        enabled: true,
+        initialPostLimit: 5,
+        initialPostAll: true
+    }]
+});
+assert.strictEqual(loadAllInitialPosts.length, 10);
 
 var bulkEntries = [];
 for (var i = 0; i < 10; i++) {

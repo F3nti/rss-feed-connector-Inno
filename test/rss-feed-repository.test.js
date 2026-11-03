@@ -11,7 +11,9 @@ function MockDatabase() {
         topic: "connect?test",
         tags: "[\"security\",\"heise\"]",
         interval_minutes: "30",
-        enabled: true
+        enabled: true,
+        initial_post_limit: "10",
+        initial_post_all: false
     }];
     this.entries = [];
     this.failQuery = null;
@@ -134,7 +136,9 @@ assert.deepStrictEqual(loadedFeeds, [{
     topic: "connect?test",
     tags: ["security", "heise"],
     intervalMinutes: 30,
-    enabled: true
+    enabled: true,
+    initialPostLimit: 10,
+    initialPostAll: false
 }]);
 
 var savedId;
@@ -145,7 +149,9 @@ repository.save({
     topic: "connect?test",
     tags: ["news"],
     intervalMinutes: 10,
-    enabled: true
+    enabled: true,
+    initialPostLimit: 7,
+    initialPostAll: true
 }, function (id) {
     savedId = id;
 }, function (error) {
@@ -154,6 +160,8 @@ repository.save({
 assert.strictEqual(savedId, 11);
 assert(database.queries[1].indexOf("'Heise''s feed'") !== -1);
 assert(database.queries[1].indexOf("RETURNING id") !== -1);
+assert(database.queries[1].indexOf("initial_post_limit") !== -1);
+assert(database.queries[1].indexOf("7, TRUE") !== -1);
 
 var removed;
 database.rows = [{ id: "11" }];

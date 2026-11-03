@@ -166,15 +166,17 @@ h2 {
 
 label {
     display: grid;
+    align-content: start;
     gap: 8px;
     color: var(--text);
     font-size: 13px;
     font-weight: 600;
 }
 
-input,
-select {
+#feed-form input:not([type="checkbox"]),
+#feed-form select {
     width: 100%;
+    height: 42px;
     min-height: 42px;
     padding: 9px 11px;
     border: 1px solid var(--border);
@@ -195,11 +197,17 @@ button:focus-visible {
     align-items: center;
     align-self: end;
     min-height: 42px;
+    gap: 10px;
 }
 
 .checkbox-field input {
+    flex: 0 0 18px;
     width: 18px;
     min-height: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    border-radius: 3px;
 }
 
 .form-actions {

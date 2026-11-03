@@ -65,6 +65,9 @@
 
         document.getElementById("refresh").addEventListener("click", requestState);
         document.getElementById("cancel-edit").addEventListener("click", resetForm);
+        document.getElementById("feed-initial-post-all").addEventListener("change", function () {
+            document.getElementById("feed-initial-post-limit").disabled = this.checked;
+        });
         feedForm.addEventListener("submit", saveCurrentFeed);
     }
 
@@ -327,7 +330,11 @@
                 topic: topicSelect.value,
                 tags: tags,
                 intervalMinutes: Number(document.getElementById("feed-interval").value),
-                enabled: document.getElementById("feed-enabled").checked
+                enabled: document.getElementById("feed-enabled").checked,
+                initialPostLimit: Number(
+                    document.getElementById("feed-initial-post-limit").value
+                ),
+                initialPostAll: document.getElementById("feed-initial-post-all").checked
             }
         });
     }
@@ -340,6 +347,12 @@
         document.getElementById("feed-tags").value = (feed.tags || []).join(", ");
         document.getElementById("feed-interval").value = feed.intervalMinutes;
         document.getElementById("feed-enabled").checked = feed.enabled;
+        document.getElementById("feed-initial-post-limit").value =
+            feed.initialPostLimit || 5;
+        document.getElementById("feed-initial-post-all").checked =
+            feed.initialPostAll === true;
+        document.getElementById("feed-initial-post-limit").disabled =
+            feed.initialPostAll === true;
         topicSelect.value = feed.topic;
         document.getElementById("form-heading").textContent = "Feed bearbeiten";
         document.getElementById("save-feed").textContent = "Änderungen speichern";
@@ -352,6 +365,9 @@
         feedForm.reset();
         document.getElementById("feed-id").value = "";
         document.getElementById("feed-interval").value = "15";
+        document.getElementById("feed-initial-post-limit").value = "5";
+        document.getElementById("feed-initial-post-all").checked = false;
+        document.getElementById("feed-initial-post-limit").disabled = false;
         document.getElementById("form-heading").textContent = "Feed hinzufügen";
         document.getElementById("save-feed").textContent = "Feed hinzufügen";
         document.getElementById("cancel-edit").hidden = true;

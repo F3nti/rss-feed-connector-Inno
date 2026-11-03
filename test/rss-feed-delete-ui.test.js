@@ -59,6 +59,8 @@ var elementIds = [
     "feed-url",
     "feed-tags",
     "feed-interval",
+    "feed-initial-post-limit",
+    "feed-initial-post-all",
     "feed-enabled",
     "form-heading"
 ];

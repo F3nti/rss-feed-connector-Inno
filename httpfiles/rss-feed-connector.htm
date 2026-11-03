@@ -65,15 +65,22 @@
                     <label>
                         Tags
                         <input id="feed-tags" name="tags" type="text" placeholder="security, heise">
-                        <span class="hint">Kommagetrennte Connect-Tags</span>
                     </label>
                     <label>
                         Abrufintervall (Minuten)
                         <input id="feed-interval" name="interval" type="number" min="1" max="1440" step="1" value="15" required>
                     </label>
+                    <label>
+                        Beiträge beim ersten Abruf (max. 50)
+                        <input id="feed-initial-post-limit" name="initial-post-limit" type="number" min="1" max="50" step="1" value="5" required>
+                    </label>
                     <label class="checkbox-field">
                         <input id="feed-enabled" name="enabled" type="checkbox" checked>
                         <span>Feed aktiv</span>
+                    </label>
+                    <label class="checkbox-field">
+                        <input id="feed-initial-post-all" name="initial-post-all" type="checkbox">
+                        <span>Alle vorhandenen Beiträge laden</span>
                     </label>
                 </div>
                 <div class="form-actions">
