@@ -1,6 +1,6 @@
 # Innovaphone RSS Feed Connector
 
-**Current release: 0.3.0 Beta** · [GitHub release](https://github.com/F3nti/rss-feed-connector-Inno/releases/tag/v0.3.0-beta)
+**Current release candidate: 0.3.0-rc.1**
 
 ![Innovaphone Connect RSS app logo](httpfiles/rss-connect-icon.png)
 
@@ -8,10 +8,10 @@ The RSS Feed Connector is an innovaphone App Platform application that polls
 RSS 2.0 and Atom feeds and posts new entries to accessible innovaphone Connect
 topics. Administrators manage feeds from a myApps interface.
 
-> **Beta notice:** The 0.3.0 Beta release includes the HTTP files archive, but
-> not ready-to-install App Platform binaries or architecture-specific
-> application packages. A successful local test run is not a substitute for a
-> smoke test on your target PBX.
+> **Release candidate:** This prerelease is prepared for final deployment
+> validation. Build architecture-specific App Platform packages with the
+> matching innovaphone SDK and verify the update on the target PBX before
+> treating it as a stable release.
 
 ## Features
 
@@ -334,10 +334,10 @@ other sensitive values first.
 
 ## Release status
 
-The current public release is **0.3.0 Beta** (`v0.3.0-beta`). It is a
-prerelease. The release includes the HTTP files archive, but not a ready-to-
-install App Platform binary or architecture-specific application package.
-Build those with the SDK toolchain matching the target PBX platform.
+The current release candidate is **0.3.0-rc.1** (HTTP build 9, label `rc`).
+It is a prerelease and has not been published as a GitHub release. Build
+architecture-specific App Platform packages with the SDK toolchain matching
+the target PBX platform.
 
 ## License
 

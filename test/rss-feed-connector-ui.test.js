@@ -21,11 +21,11 @@ var appLogo = fs.readFileSync(path.join(
 assert(appLogo.indexOf('viewBox="32 32 448 448"') !== -1);
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "build.txt"), "utf8").trim(),
-    "8"
+    "9"
 );
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "label.txt"), "utf8").trim(),
-    "beta"
+    "rc"
 );
 
 var html = fs.readFileSync(
