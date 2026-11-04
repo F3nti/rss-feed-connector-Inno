@@ -28,6 +28,9 @@ topics. Administrators manage feeds from a myApps interface.
   database so known entries remain deduplicated across service restarts.
 - Persist each feed's latest status, summary, and run time so the myApps
   overview retains useful diagnostics after service restarts.
+- Configure the PBX App Object from the PBX Manager plugin, including Services
+  API and Messages API access, and grant selected user templates access to the
+  app.
 - Limit concurrent Messages API posts and batch database lookups for known
   GUIDs.
 - Validate feed URLs and resolved addresses before downloading; reject
@@ -139,8 +142,8 @@ to run the complete application service outside the App Platform.
 `config.json` declares the `rss_feeds` and `rss_entries` database tables and
 loads service scripts in dependency order. In particular,
 `rss-url-policy.js` must be loaded before the downloader and service.
-`apps.json` maps the application name to its app URL; it does not create or
-configure a PBX App Object or assign users.
+`apps.json` maps the application name to its app URL. `plugins.json`
+registers the PBX Manager setup plugin for creating the PBX App Object.
 
 ## Run the tests
 
@@ -152,8 +155,8 @@ node --test test/*.test.js
 
 The test suite covers the URL policy and downloader, RSS and Atom parsing,
 database repositories, feed deduplication and deletion, service topic
-validation, scheduler behavior, Messages API communication, and myApps UI
-startup. The current suite passes all 12 test files.
+validation, scheduler behavior, Messages API communication, PBX Manager
+provisioning, and myApps UI startup. The current suite contains 13 test files.
 
 The parser fixtures are `test/sample-rss.xml` and `test/sample-atom.xml`.
 Tests use local doubles for innovaphone APIs and do not require a live PBX or
@@ -161,21 +164,37 @@ network connection.
 
 ## Build and deploy
 
-This repository contains the application source, not a prebuilt App Platform
-binary or deployable `httpfiles.zip`. The `dist/` directory is generated and
-ignored by Git. Use the packaging toolchain documented for your installed
-innovaphone SDK / App Platform version to create and install the app package.
+The `dist/` directory is generated and ignored by Git. Build the App Platform
+archives with the generic JavaScript Runtime binaries from the SDK version
+matching the target PBX. For SDK 16r1, run:
+
+```powershell
+.\tools\build-app-platform-package.ps1 `
+  -SdkRoot C:\innovaphone\sdk\sdk\16r1
+```
+
+The script creates `httpfiles.zip` and complete per-architecture archives for
+ARM, ARM64, and x86_64 under `dist/app-platform/`. Each archive contains the
+SDK runtime binary renamed for this app, `httpfiles.zip`, the app icon, and the
+license. The script checks required files, HTTP build metadata, and the ELF
+architecture of each runtime. Use the archive matching the App Platform
+architecture; the tested PBX in this project uses x86_64.
 
 Deployment checklist:
 
 1. Check out the desired release tag and build the package with the toolchain
    for the target App Platform version and architecture.
-2. Include the service scripts, `config.json`, `apps.json`, browser UI assets,
-   and required browser-side SDK files in the package.
-3. Configure the PBX App Object with the Services API and the required
-   `messages-api` service permission.
-4. Install or update the app, create/configure its App Object, and assign it to
-   the administrators who need the myApps UI.
+2. Include the service scripts, `config.json`, `apps.json`, `plugins.json`,
+   PBX Manager plugin assets, browser UI assets, and required browser-side SDK
+   files in the package.
+3. Install or update the app and open its setup plugin in the PBX Manager.
+4. Create or update the App Object in the PBX Manager plugin. It enables the
+   Websocket, Messages, and Services APIs and grants access to `connect` and
+   `messages-api`. Select one or more user configuration templates to grant
+   those users access to and visibility of the app. Additional App Objects can
+   target separate App Platform instances. Their instance path is derived from
+   the SIP name (the part before `@`), so the corresponding instance must already
+   exist on the App Platform.
 5. Confirm that the service connects to `messages-api`, can read the intended
    Connect topic, and can reach feed hosts over DNS and HTTP(S).
 6. Add a test feed containing a previously unseen GUID. Verify the resulting
@@ -192,17 +211,26 @@ appdev/rss-feed-connector
 ```
 
 The app is provided by that instance under the name `rss-feed-connector`, as
-declared in `apps.json`. In the PBX App Object, select the URL provided by this
-instance and point it to the app's start page. The resulting path should be:
+declared in `apps.json`. In the PBX App Object, point the URL to the app's start
+page. For an instance named `rss-feed-connector`, the resulting path is:
 
 ```text
 appdev/rss-feed-connector/rss-feed-connector.htm
 ```
 
-These are relative path examples; the PBX supplies the scheme and host. Do not
-add `.htm` to the instance webserver path or to the app name in `apps.json`.
-The PBX App Object URL must resolve to the start `.htm` file; using only the
-path without `.htm` may return 404 instead of opening the app.
+For another App Platform instance with SIP name `rss-feed-backup`, the plugin
+uses:
+
+```text
+appdev/rss-feed-backup/rss-feed-connector.htm
+```
+
+These are relative path examples; the PBX supplies the scheme and host. The
+target App Platform instance must already exist and use the SIP name as its
+webserver-path segment. Do not add `.htm` to the instance webserver path or to
+the app name in `apps.json`. The PBX App Object URL must resolve to the start
+`.htm` file; using only the path without `.htm` may return 404 instead of
+opening the app.
 
 ### PBX App Object APIs, permissions, and Connect access
 
@@ -252,12 +280,15 @@ Open the app in myApps and add a feed with:
 | Feed active | Disabled feeds are not scheduled or manually run. |
 
 Save a feed to persist it. The interface refreshes its state periodically and
-shows the last in-memory run status. Use **Jetzt abrufen** (“Run now”) to start
-an enabled feed immediately; edit or delete feeds from their cards.
+shows the last run status, summary, and time. These diagnostics are stored with
+the feed and remain available after a service restart. Use **Jetzt abrufen**
+(“Run now”) to start an enabled feed immediately; edit or delete feeds from
+their cards.
 
 Feed configuration and known entry GUIDs are stored in the App Platform
-database. Run status and scheduler state are held in service memory and are
-recreated when the service restarts.
+database. Scheduler timers are recreated when the service restarts; if a feed
+was marked as running when the service stopped, its status is changed to show
+that the previous cycle was interrupted.
 
 ## Security notes and limitations
 
@@ -293,12 +324,19 @@ other sensitive values first.
 
 ## Release status
 
-The current public release is **0.2.1 Beta** (`v0.2.1-beta`). It is a
-prerelease and is provided as source code with GitHub-generated source
-archives. App Platform installation packages are not attached.
+The current public release is **0.3.0 Beta** (`v0.3.0-beta`). It is a
+prerelease. The release includes the HTTP files archive, but not a ready-to-
+install App Platform binary or architecture-specific application package.
+Build those with the SDK toolchain matching the target PBX platform.
 
 ## License
 
-This repository currently has no `LICENSE` file. Do not assume the source is
-available under MIT or another open-source license; clarify reuse and
-redistribution terms with the project owner.
+Project-owned source code is available under the
+[PolyForm Noncommercial License 1.0.0](./LICENSE). Noncommercial use,
+modification, and redistribution are permitted under its terms, with the
+required copyright notice retained. Commercial use is not granted by this
+license. This is not an OSI-approved open-source license.
+
+Third-party components, including the innovaphone SDK files under
+`httpfiles/web1/`, are not relicensed by this project license and remain
+subject to their respective upstream notices and terms.

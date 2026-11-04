@@ -1,0 +1,10 @@
+{
+    "plugins": [
+        {
+            "js": "f3nti.ManagerRssFeedConnector",
+            "icon": "rss-feed-connector.png",
+            "lang": "f3nti.ManagerRssFeedConnectorTexts",
+            "domains": false
+        }
+    ]
+}
