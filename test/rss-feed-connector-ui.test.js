@@ -21,7 +21,7 @@ var appLogo = fs.readFileSync(path.join(
 assert(appLogo.indexOf('viewBox="32 32 448 448"') !== -1);
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "build.txt"), "utf8").trim(),
-    "6"
+    "8"
 );
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "label.txt"), "utf8").trim(),
@@ -36,6 +36,8 @@ assert(html.indexOf('id="feed-enabled"') < html.indexOf('id="feed-initial-post-a
 assert(html.indexOf('src="web1/lib1/innovaphone.lib1.js"') !== -1);
 assert(html.indexOf('src="web1/appwebsocket/innovaphone.appwebsocket.Connection.js"') !== -1);
 assert(html.indexOf('src="rss-connect-logo.svg"') !== -1);
+assert(html.indexOf('id="access-gate"') !== -1);
+assert(html.indexOf('id="app-shell" class="app" hidden') !== -1);
 assert(fs.existsSync(path.join(__dirname, "..", "httpfiles", "web1", "lib1", "innovaphone.lib1.js")));
 assert(fs.existsSync(path.join(
     __dirname,
@@ -49,6 +51,10 @@ assert(fs.existsSync(path.join(
 var elements = {};
 var topicOptions = [];
 [
+    "access-gate",
+    "access-gate-heading",
+    "access-gate-message",
+    "app-shell",
     "feed-form",
     "feed-list",
     "feed-topic",
@@ -155,6 +161,11 @@ vm.runInNewContext(
     context
 );
 assert.strictEqual(typeof startCallback, "function");
+startCallback({});
+assert.strictEqual(elements["access-gate"].hidden, false);
+assert.strictEqual(elements["access-gate-heading"].textContent, "Nicht autorisiert");
+assert.strictEqual(elements["app-shell"].hidden, true);
+assert.strictEqual(createdConnection, undefined);
 var appStart = {
     url: "wss://app.example/app",
     name: "rss-feed-connector",
@@ -166,6 +177,8 @@ var appStart = {
     }
 };
 startCallback(appStart);
+assert.strictEqual(elements["access-gate-heading"].textContent, "Verbindung wird geprüft");
+assert.strictEqual(elements["app-shell"].hidden, true);
 assert.strictEqual(documentAttributes["data-scheme"], "dark");
 assert.strictEqual(typeof schemeChanged, "function");
 appStart.scheme = "light";
@@ -176,6 +189,8 @@ assert.strictEqual(JSON.stringify(connectionArguments), JSON.stringify([
     "rss-feed-connector"
 ]));
 createdConnection.onconnected("example.com", "admin", "Admin");
+assert.strictEqual(elements["access-gate"].hidden, true);
+assert.strictEqual(elements["app-shell"].hidden, false);
 assert.strictEqual(elements["identity-app"].textContent, "rss-feed-connector");
 assert.strictEqual(elements["identity-user"].textContent, "Admin (admin@example.com)");
 assert.strictEqual(sentMessages.length, 1);
@@ -225,5 +240,11 @@ createdConnection.onmessage({
 assert.deepStrictEqual(topicOptions.map(function (option) { return option.value; }), [""]);
 assert.strictEqual(elements["feed-topic"].disabled, true);
 assert.strictEqual(elements["save-feed"].disabled, true);
+
+createdConnection.onerror("authentication failed");
+assert.strictEqual(elements["access-gate"].hidden, false);
+assert.strictEqual(elements["access-gate-heading"].textContent, "myApps-Verbindung fehlgeschlagen");
+assert.strictEqual(elements["access-gate-message"].textContent.indexOf("authentication failed") !== -1, true);
+assert.strictEqual(elements["app-shell"].hidden, true);
 
 console.log("myApps UI startup tests passed");

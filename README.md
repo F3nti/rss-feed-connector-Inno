@@ -232,6 +232,11 @@ the app name in `apps.json`. The PBX App Object URL must resolve to the start
 `.htm` file; using only the path without `.htm` may return 404 instead of
 opening the app.
 
+When the PBX Manager is opened through an App Proxy URL such as
+`http://localhost:10008/appproxy/ext/<ap-host>/<path>`, the plugin stores the
+public HTTPS URL `https://<ap-host>/<path>` in the PBX object instead of the
+local proxy URL.
+
 ### PBX App Object APIs, permissions, and Connect access
 
 Configure the PBX App Object used to launch the app with:
@@ -244,6 +249,11 @@ Configure the PBX App Object used to launch the app with:
   The service uses that permission to establish its authenticated connection;
   without it, topic discovery and posting cannot work.
 - The App Object assigned to the intended users, so they can launch the app.
+
+The browser UI stays hidden until its AppWebsocket connection is established and
+shows a not-authorized message when opened directly. This is a presentation gate
+only; server-side AppWebsocket and Services API authorization remains the actual
+access control.
 
 The Messages API session must be able to access the destination Connect topics.
 If a topic is not returned by topic discovery, check Connect topic access and

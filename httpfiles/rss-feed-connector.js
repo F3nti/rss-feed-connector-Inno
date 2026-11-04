@@ -21,21 +21,24 @@
             });
         }
 
-        document.getElementById("identity-app").textContent =
-            appStart && appStart.name ? appStart.name : "RSS Feed Connector";
-
         if (!appStart || !appStart.url || !appStart.name ||
             typeof innovaphone === "undefined" ||
             !innovaphone.appwebsocket ||
             typeof innovaphone.appwebsocket.Connection !== "function") {
-            setConnectionStatus("myApps-Verbindung nicht verfügbar", "error");
-            showNotice("Die App konnte nicht im myApps-Kontext gestartet werden.", "error");
+            setAccessState(
+                "Nicht autorisiert",
+                "Diese Oberfläche ist nur über myApps verfügbar. Bitte öffne die App über deinen myApps App Drawer."
+            );
             return;
         }
 
+        setAccessState("Verbindung wird geprüft", "Die myApps-Anmeldung wird überprüft …");
+        document.getElementById("identity-app").textContent = appStart.name;
         appConnection = new innovaphone.appwebsocket.Connection(appStart.url, appStart.name);
         appConnection.onconnected = function (domain, user, displayName) {
             connected = true;
+            document.getElementById("access-gate").hidden = true;
+            document.getElementById("app-shell").hidden = false;
             var identity = user || "";
             if (domain) {
                 identity += (identity ? "@" : "") + domain;
@@ -51,12 +54,21 @@
         appConnection.onmessage = handleMessage;
         appConnection.onerror = function (error) {
             connected = false;
-            setConnectionStatus("Verbindungsfehler", "error");
-            showNotice("Die Verbindung zur App Platform ist fehlgeschlagen: " + error, "error");
+            setAccessState(
+                "myApps-Verbindung fehlgeschlagen",
+                "Die Anmeldung konnte nicht bestätigt werden. Prüfe die Verbindung und App-Berechtigungen. Fehler: " +
+                    error
+            );
         };
         appConnection.onclosed = function () {
+            if (connected) {
+                document.getElementById("app-shell").hidden = true;
+                setAccessState(
+                    "Verbindung getrennt",
+                    "Die myApps-Verbindung wurde getrennt. Bitte öffne die App erneut über deinen myApps App Drawer."
+                );
+            }
             connected = false;
-            setConnectionStatus("Getrennt", "error");
             if (refreshTimer !== null) {
                 window.clearInterval(refreshTimer);
                 refreshTimer = null;
@@ -407,6 +419,13 @@
         connectionStatus.setAttribute("data-state", state);
     }
 
+    function setAccessState(heading, message) {
+        document.getElementById("access-gate-heading").textContent = heading;
+        document.getElementById("access-gate-message").textContent = message;
+        document.getElementById("access-gate").hidden = false;
+        document.getElementById("app-shell").hidden = true;
+    }
+
     function showNotice(text, type) {
         notice.textContent = text;
         notice.setAttribute("data-type", type || "success");
@@ -424,7 +443,9 @@
         innovaphone.lib1.Start(initialize);
     }
     else {
-        setConnectionStatus("myApps-Startbibliothek nicht verfügbar", "error");
-        showNotice("Die App konnte nicht initialisiert werden.", "error");
+        setAccessState(
+            "Nicht autorisiert",
+            "Diese Oberfläche ist nur über myApps verfügbar. Bitte öffne die App über deinen myApps App Drawer."
+        );
     }
 }());

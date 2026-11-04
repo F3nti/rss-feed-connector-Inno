@@ -93,8 +93,8 @@ try {
 
     $build = (Get-Content -Raw (Join-Path $httpStage "build.txt")).Trim()
     $label = (Get-Content -Raw (Join-Path $httpStage "label.txt")).Trim()
-    if ($build -ne "6" -or $label -ne "beta") {
-        throw "Expected HTTP build 6 with label beta; got build '$build', label '$label'"
+    if ($build -ne "8" -or $label -ne "beta") {
+        throw "Expected HTTP build 8 with label beta; got build '$build', label '$label'"
     }
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem

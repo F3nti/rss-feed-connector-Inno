@@ -5,7 +5,7 @@ plugin.f3nti = plugin.f3nti || {};
 plugin.f3nti.ManagerRssFeedConnector = function (start, item, app) {
     this.createNode("div", "height:100%; overflow:auto; padding:16px; box-sizing:border-box; color:var(--innovaphone-text-color, #eee); background:var(--innovaphone-background-color, #252525)", null, "item-node");
 
-    var instanceRoot = getInstanceRoot(item.uri);
+    var instanceRoot = getInstanceRoot(getCanonicalAppUri(item.uri));
     var instanceBaseRoot = getParentInstanceRoot(instanceRoot);
     var appUrl = instanceRoot + "rss-feed-connector.htm";
     var appObjects = [];
@@ -490,6 +490,7 @@ plugin.f3nti.ManagerRssFeedConnector.buildDeleteObjectRequest = buildDeleteObjec
 plugin.f3nti.ManagerRssFeedConnector.findAppObjectBySip = findAppObjectBySip;
 plugin.f3nti.ManagerRssFeedConnector.findAppObjectByUrl = findAppObjectByUrl;
 plugin.f3nti.ManagerRssFeedConnector.getAppUrl = getAppUrl;
+plugin.f3nti.ManagerRssFeedConnector.getCanonicalAppUri = getCanonicalAppUri;
 plugin.f3nti.ManagerRssFeedConnector.getParentInstanceRoot = getParentInstanceRoot;
 plugin.f3nti.ManagerRssFeedConnector.getInstancePath = getInstancePath;
 plugin.f3nti.ManagerRssFeedConnector.getUrlPath = getUrlPath;
@@ -556,6 +557,23 @@ function addField(parent, label, value) {
 function getInstanceRoot(uri) {
     if (uri.slice(-1) === "/") return uri;
     return uri.slice(0, uri.lastIndexOf("/") + 1);
+}
+
+function getCanonicalAppUri(uri) {
+    if (typeof uri !== "string") {
+        throw new Error("The App Platform instance URL is not available.");
+    }
+    var proxyMatch = uri.match(
+        /^https?:\/\/[^/]+\/appproxy\/ext\/([^/]+)\/(.+)$/i
+    );
+    if (proxyMatch) {
+        return "https://" + proxyMatch[1] + "/" + proxyMatch[2];
+    }
+    var directMatch = uri.match(/^https?:\/\/([^/]+)(\/.*)?$/i);
+    if (!directMatch) {
+        throw new Error("The App Platform instance URL is invalid.");
+    }
+    return "https://" + directMatch[1] + (directMatch[2] || "/");
 }
 
 function getParentInstanceRoot(instanceRoot) {

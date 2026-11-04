@@ -164,6 +164,22 @@ assert.strictEqual(isManagedAppObject({
     url: "https://app.example/app/40/another-app/rss-feed-connector.htm"
 }, "https://app.example/app/4/"), false);
 var getAppUrl = context.plugin.f3nti.ManagerRssFeedConnector.getAppUrl;
+var getCanonicalAppUri =
+    context.plugin.f3nti.ManagerRssFeedConnector.getCanonicalAppUri;
+assert.strictEqual(
+    getCanonicalAppUri(
+        "http://localhost:10008/appproxy/ext/logintk-a.innovaphone.com/log-in-tk.de/rss-feed-connector-2/"
+    ),
+    "https://logintk-a.innovaphone.com/log-in-tk.de/rss-feed-connector-2/"
+);
+assert.strictEqual(
+    getCanonicalAppUri("http://ap.example/appdev/rss-feed-connector/"),
+    "https://ap.example/appdev/rss-feed-connector/"
+);
+assert.strictEqual(
+    getCanonicalAppUri("https://ap.example/appdev/rss-feed-connector/"),
+    "https://ap.example/appdev/rss-feed-connector/"
+);
 assert.strictEqual(
     getAppUrl("https://app.example/app/4/", "rss-feed-backup"),
     "https://app.example/app/4/rss-feed-backup/rss-feed-connector.htm"

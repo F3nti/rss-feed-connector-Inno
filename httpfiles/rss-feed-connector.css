@@ -39,6 +39,31 @@ select {
     padding: 38px 0 64px;
 }
 
+.access-gate {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    padding: 24px;
+    text-align: center;
+}
+
+.access-gate > div {
+    width: min(520px, 100%);
+    padding: 32px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.access-gate h1 {
+    margin-bottom: 12px;
+}
+
+.access-gate p:last-child {
+    margin-bottom: 0;
+    color: var(--muted);
+}
+
 .app-header,
 .brand,
 .section-heading,

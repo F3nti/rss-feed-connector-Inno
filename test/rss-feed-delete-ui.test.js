@@ -44,6 +44,10 @@ function createElement(tagName) {
 }
 
 var elementIds = [
+    "access-gate",
+    "access-gate-heading",
+    "access-gate-message",
+    "app-shell",
     "feed-form",
     "feed-list",
     "feed-topic",

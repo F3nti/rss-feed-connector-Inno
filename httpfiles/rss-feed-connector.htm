@@ -10,7 +10,15 @@
     <script defer src="rss-feed-connector.js"></script>
 </head>
 <body>
-    <main class="app">
+    <main id="access-gate" class="access-gate" role="alert">
+        <div>
+            <p class="eyebrow">RSS FEED CONNECTOR</p>
+            <h1 id="access-gate-heading">Nicht autorisiert</h1>
+            <p id="access-gate-message">Diese Oberfläche ist nur über myApps verfügbar. Bitte öffne die App über deinen myApps App Drawer.</p>
+        </div>
+    </main>
+
+    <main id="app-shell" class="app" hidden>
         <header class="app-header">
             <div class="brand">
                 <img class="brand-logo" src="rss-connect-logo.svg" alt="Connect mit RSS">
