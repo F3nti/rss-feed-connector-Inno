@@ -8,10 +8,10 @@ The RSS Feed Connector is an innovaphone App Platform application that polls
 RSS 2.0 and Atom feeds and posts new entries to accessible innovaphone Connect
 topics. Administrators manage feeds from a myApps interface.
 
-> **Beta notice:** The project is published as source code. The 0.3.0 Beta
-> release does not include ready-to-install App Platform binaries or
-> architecture-specific packages. A successful local test run is not a
-> substitute for a smoke test on your target PBX.
+> **Beta notice:** The 0.3.0 Beta release includes the HTTP files archive, but
+> not ready-to-install App Platform binaries or architecture-specific
+> application packages. A successful local test run is not a substitute for a
+> smoke test on your target PBX.
 
 ## Features
 
