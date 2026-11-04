@@ -260,9 +260,11 @@ function sendStateResponse(connection, sourceId, feeds, topics, topicError) {
     var statuses = {};
     feeds.forEach(function (feed) {
         statuses[String(feed.id)] = feedStatuses["$" + feed.id] || {
-            state: feed.enabled ? "waiting" : "disabled",
-            lastRun: "",
-            summary: feed.enabled ? "Waiting for first feed cycle" : "Feed is disabled"
+            state: feed.status ? feed.status.state :
+                (feed.enabled ? "waiting" : "disabled"),
+            lastRun: feed.status ? feed.status.lastRun : "",
+            summary: feed.status ? feed.status.summary :
+                (feed.enabled ? "Waiting for first feed cycle" : "Feed is disabled")
         };
     });
 
@@ -509,7 +511,17 @@ function syncSchedulers(feeds) {
         var key = "$" + feed.id;
         configured[key] = true;
         var existing = feedSchedulers[key];
-        var signature = JSON.stringify(feed);
+        var signature = JSON.stringify({
+            id: feed.id,
+            name: feed.name,
+            url: feed.url,
+            topic: feed.topic,
+            tags: feed.tags,
+            intervalMinutes: feed.intervalMinutes,
+            enabled: feed.enabled,
+            initialPostLimit: feed.initialPostLimit,
+            initialPostAll: feed.initialPostAll
+        });
         if (existing && existing.signature !== signature) {
             existing.scheduler.stop();
             delete feedSchedulers[key];
@@ -542,6 +554,14 @@ function syncSchedulers(feeds) {
         }
 
         if (!existing) {
+            if (!feedStatuses[key] && feed.status &&
+                feed.status.state === "running") {
+                setFeedStatus(
+                    feed.id,
+                    "error",
+                    "Previous feed cycle was interrupted by service restart"
+                );
+            }
             var scheduler = new (getConstructor("Scheduler"))(feed.intervalMinutes * 60 * 1000);
             feedSchedulers[key] = {
                 signature: signature,
@@ -910,11 +930,21 @@ function completeFeedCycle(feed, state, summary) {
 }
 
 function setFeedStatus(feedId, state, summary) {
-    feedStatuses["$" + feedId] = {
+    var status = {
         state: state,
         lastRun: new Date().toISOString(),
         summary: summary
     };
+    feedStatuses["$" + feedId] = status;
+    try {
+        getFeedRepository().saveStatus(feedId, status, function () {}, function (error) {
+            safeLog("Could not save status for RSS feed " + feedId + ": " + error);
+        });
+    }
+    catch (error) {
+        safeLog("Could not save status for RSS feed " + feedId + ": " +
+            (error.message || String(error)));
+    }
 }
 
 function sendApiError(connection, sourceId, error) {

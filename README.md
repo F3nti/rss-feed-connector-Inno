@@ -26,6 +26,8 @@ topics. Administrators manage feeds from a myApps interface.
   entries (1–50, default 5) or explicitly load all entries.
 - Persist feed configuration and posted entry GUIDs in the App Platform
   database so known entries remain deduplicated across service restarts.
+- Persist each feed's latest status, summary, and run time so the myApps
+  overview retains useful diagnostics after service restarts.
 - Limit concurrent Messages API posts and batch database lookups for known
   GUIDs.
 - Validate feed URLs and resolved addresses before downloading; reject
@@ -58,7 +60,10 @@ Scheduler ── URL / DNS destination checks
 After the Messages API connects and the configured topic is confirmed, enabled
 feeds are scheduled. A feed cycle downloads and parses the feed, skips
 previously posted GUIDs, and submits new entries as Messages API posts. The
-entry GUID is saved only after a successful `PostResult`.
+entry GUID is saved only after a successful `PostResult`. The latest feed
+status and run summary are also saved with the feed and loaded again after a
+service restart. A feed that was marked as running when the service stopped
+is reported as interrupted when it starts again.
 If the post succeeds but saving its GUID fails, the service retries the
 database save up to two additional times (after 500 ms and 1.5 s). It does not
 repost the message during these retries. If all attempts fail, the cycle is

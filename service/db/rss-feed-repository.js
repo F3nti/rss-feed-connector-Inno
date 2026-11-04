@@ -8,7 +8,8 @@ function RssFeedRepository(database) {
     this.list = function (onSuccess, onError) {
         execute(
             "SELECT id, name, url, topic, tags, interval_minutes, enabled, " +
-            "initial_post_limit, initial_post_all " +
+            "initial_post_limit, initial_post_all, last_status, last_run, " +
+            "last_summary " +
             "FROM rss_feeds ORDER BY id",
             function (rows) {
                 try {
@@ -65,6 +66,33 @@ function RssFeedRepository(database) {
             }
             onSuccess(Number(rows[0].id));
         }, onError);
+    };
+
+    this.saveStatus = function (feedId, status, onSuccess, onError) {
+        if (typeof feedId !== "number" || Math.floor(feedId) !== feedId ||
+            feedId < 1 || !status ||
+            typeof status.state !== "string" ||
+            typeof status.lastRun !== "string" ||
+            typeof status.summary !== "string" ||
+            typeof onSuccess !== "function" || typeof onError !== "function") {
+            throw new Error("A valid feed status and callbacks are required");
+        }
+
+        execute(
+            "UPDATE rss_feeds SET last_status = " + sqlString(status.state) +
+            ", last_run = " + sqlString(status.lastRun) +
+            ", last_summary = " + sqlString(status.summary) +
+            " WHERE id = " + feedId + " RETURNING id",
+            function (rows) {
+                if (Object.prototype.toString.call(rows) !== "[object Array]" ||
+                    rows.length !== 1) {
+                    onError("Database did not update the feed status");
+                    return;
+                }
+                onSuccess();
+            },
+            onError
+        );
     };
 
     this.remove = function (id, onSuccess, onError) {
@@ -208,7 +236,12 @@ function RssFeedRepository(database) {
             enabled: row.enabled === true || row.enabled === "true",
             initialPostLimit: Number(row.initial_post_limit || 5),
             initialPostAll: row.initial_post_all === true ||
-                row.initial_post_all === "true"
+                row.initial_post_all === "true",
+            status: {
+                state: row.last_status || "waiting",
+                lastRun: row.last_run || "",
+                summary: row.last_summary || "Waiting for first feed cycle"
+            }
         };
     }
 }

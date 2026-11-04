@@ -51,6 +51,9 @@ function runServiceWithTopics(topics) {
             enabled: true
         }]);
     };
+    FeedRepository.prototype.saveStatus = function (feedId, status, onSuccess) {
+        onSuccess();
+    };
 
     function HtmlBuilder() {}
 

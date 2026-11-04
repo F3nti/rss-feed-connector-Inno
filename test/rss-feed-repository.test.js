@@ -1,5 +1,13 @@
 var assert = require("assert");
+var config = require("../config.json");
 var RssFeedRepository = require("../service/db/rss-feed-repository.js").RssFeedRepository;
+
+var feedColumns = config.database.init[0].init.map(function (column) {
+    return column.name;
+});
+assert(feedColumns.indexOf("last_status") !== -1);
+assert(feedColumns.indexOf("last_run") !== -1);
+assert(feedColumns.indexOf("last_summary") !== -1);
 
 function MockDatabase() {
     this.queries = [];
@@ -13,7 +21,10 @@ function MockDatabase() {
         interval_minutes: "30",
         enabled: true,
         initial_post_limit: "10",
-        initial_post_all: false
+        initial_post_all: false,
+        last_status: "success",
+        last_run: "2026-11-03T12:00:00.000Z",
+        last_summary: "2 posted, 0 duplicates, 0 failed"
     }];
     this.entries = [];
     this.failQuery = null;
@@ -138,7 +149,12 @@ assert.deepStrictEqual(loadedFeeds, [{
     intervalMinutes: 30,
     enabled: true,
     initialPostLimit: 10,
-    initialPostAll: false
+    initialPostAll: false,
+    status: {
+        state: "success",
+        lastRun: "2026-11-03T12:00:00.000Z",
+        summary: "2 posted, 0 duplicates, 0 failed"
+    }
 }]);
 
 var savedId;
@@ -162,6 +178,24 @@ assert(database.queries[1].indexOf("'Heise''s feed'") !== -1);
 assert(database.queries[1].indexOf("RETURNING id") !== -1);
 assert(database.queries[1].indexOf("initial_post_limit") !== -1);
 assert(database.queries[1].indexOf("7, TRUE") !== -1);
+
+var savedStatus;
+repository.saveStatus(11, {
+    state: "error",
+    lastRun: "2026-11-03T12:30:00.000Z",
+    summary: "Feed download failed: temporary failure"
+}, function () {
+    savedStatus = true;
+}, function (error) {
+    throw new Error(error);
+});
+assert.strictEqual(savedStatus, true);
+assert(database.queries[2].indexOf(
+    "last_status = 'error', last_run = '2026-11-03T12:30:00.000Z'"
+) !== -1);
+assert(database.queries[2].indexOf(
+    "last_summary = 'Feed download failed: temporary failure'"
+) !== -1);
 
 var removed;
 database.rows = [{ id: "11" }];

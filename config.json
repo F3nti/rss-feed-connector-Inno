@@ -49,6 +49,21 @@
                         "cmd": "column",
                         "name": "initial_post_all",
                         "type": "BOOLEAN NOT NULL DEFAULT FALSE"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "last_status",
+                        "type": "VARCHAR(16) NOT NULL DEFAULT 'waiting'"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "last_run",
+                        "type": "TEXT NOT NULL DEFAULT ''"
+                    },
+                    {
+                        "cmd": "column",
+                        "name": "last_summary",
+                        "type": "TEXT NOT NULL DEFAULT 'Waiting for first feed cycle'"
                     }
                 ]
             },

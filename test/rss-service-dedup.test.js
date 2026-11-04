@@ -153,6 +153,9 @@ function runServiceInstance(options) {
     var logs = [];
     var instanceDatabase = options.database || database;
     var instanceEntries = options.entries || feedEntries;
+    var statusStore = options.statusStore || {};
+    var stateMessage = null;
+    var controlOnConnected;
 
     function ServicesClient() {
         this.onclose = function () {};
@@ -178,7 +181,7 @@ function runServiceInstance(options) {
 
     function FeedRepository() {}
     FeedRepository.prototype.list = function (onSuccess) {
-        onSuccess(options.feeds || [{
+        var configuredFeeds = options.feeds || [{
             id: 1,
             name: "Test feed",
             url: "https://example.com/feed.xml",
@@ -188,7 +191,29 @@ function runServiceInstance(options) {
             enabled: true,
             initialPostLimit: 5,
             initialPostAll: false
-        }]);
+        }];
+        onSuccess(configuredFeeds.map(function (feed) {
+            return {
+                id: feed.id,
+                name: feed.name,
+                url: feed.url,
+                topic: feed.topic,
+                tags: feed.tags,
+                intervalMinutes: feed.intervalMinutes,
+                enabled: feed.enabled,
+                initialPostLimit: feed.initialPostLimit,
+                initialPostAll: feed.initialPostAll,
+                status: statusStore["$" + feed.id] || feed.status
+            };
+        }));
+    };
+    FeedRepository.prototype.saveStatus = function (feedId, status, onSuccess) {
+        statusStore["$" + feedId] = {
+            state: status.state,
+            lastRun: status.lastRun,
+            summary: status.summary
+        };
+        onSuccess();
     };
 
     function HtmlBuilder() {
@@ -205,9 +230,18 @@ function runServiceInstance(options) {
 
     function Scheduler() {
         this.start = function (callback) {
+            if (options.holdScheduler) {
+                return;
+            }
             callback();
         };
         this.stop = function () {};
+    }
+
+    function JsonApi() {
+        this.onconnected = function (callback) {
+            controlOnConnected = callback;
+        };
     }
 
     var modules = {
@@ -229,6 +263,7 @@ function runServiceInstance(options) {
             return modules[modulePath];
         },
         Database: instanceDatabase,
+        JsonApi: JsonApi,
         Timers: {
             setTimeout: function (callback, delay) {
                 if (options.retryTimerError) {
@@ -245,8 +280,22 @@ function runServiceInstance(options) {
         }
     });
 
+    if (options.getState) {
+        var onControlMessage;
+        controlOnConnected({
+            onmessage: function (callback) {
+                onControlMessage = callback;
+            },
+            send: function (message) {
+                stateMessage = JSON.parse(message);
+            }
+        });
+        onControlMessage(JSON.stringify({ mt: "GetState", src: "state-test" }));
+    }
+
     posts.retryDelays = retryDelays;
     posts.logs = logs;
+    posts.stateMessage = stateMessage;
     return posts;
 }
 
@@ -415,6 +464,47 @@ assert.strictEqual(runServiceInstance({
     database: retryDatabase,
     entries: [feedEntries[0]]
 }).length, 0);
+
+var persistedStatusStore = {};
+runServiceInstance({
+    database: createDatabase(),
+    entries: [],
+    statusStore: persistedStatusStore
+});
+assert.strictEqual(persistedStatusStore["$1"].state, "success");
+var restartedStatusPosts = runServiceInstance({
+    database: createDatabase(),
+    entries: [],
+    statusStore: persistedStatusStore,
+    holdScheduler: true,
+    getState: true
+});
+assert.strictEqual(restartedStatusPosts.length, 0);
+assert.strictEqual(restartedStatusPosts.stateMessage.statuses["1"].state, "success");
+assert.strictEqual(restartedStatusPosts.stateMessage.statuses["1"].summary,
+    "0 posted, 0 duplicates, 0 failed");
+assert.strictEqual(restartedStatusPosts.stateMessage.statuses["1"].lastRun,
+    persistedStatusStore["$1"].lastRun);
+
+var interruptedStatusStore = {
+    "$1": {
+        state: "running",
+        lastRun: "2026-11-03T12:00:00.000Z",
+        summary: "Downloading feed"
+    }
+};
+var interruptedStatusPosts = runServiceInstance({
+    database: createDatabase(),
+    entries: [],
+    statusStore: interruptedStatusStore,
+    holdScheduler: true,
+    getState: true
+});
+assert.strictEqual(interruptedStatusPosts.stateMessage.statuses["1"].state, "error");
+assert.strictEqual(
+    interruptedStatusPosts.stateMessage.statuses["1"].summary,
+    "Previous feed cycle was interrupted by service restart"
+);
 
 var failedSaveDatabase = createDatabase();
 failedSaveDatabase.failNextEntrySaves(3);
