@@ -44,17 +44,38 @@ function createElement(tagName) {
 }
 
 var elementIds = [
+    "page-title",
+    "brand-logo",
     "access-gate",
     "access-gate-heading",
     "access-gate-message",
+    "app-eyebrow",
+    "app-subtitle",
     "app-shell",
     "feed-form",
     "feed-list",
     "feed-topic",
     "notice",
     "connection-status",
+    "identity-panel",
+    "identity-user-label",
+    "identity-app-label",
+    "identity-description",
     "identity-app",
     "identity-user",
+    "configuration-eyebrow",
+    "feed-name-label",
+    "feed-url-label",
+    "feed-topic-label",
+    "feed-topic-loading",
+    "feed-tags-label",
+    "feed-interval-label",
+    "feed-initial-post-limit-label",
+    "feed-enabled-label",
+    "feed-initial-post-all-label",
+    "overview-eyebrow",
+    "feeds-heading",
+    "feed-list-loading",
     "refresh",
     "cancel-edit",
     "save-feed",
@@ -150,7 +171,7 @@ var statusHeader = controls.children[0];
 assert.strictEqual(statusHeader.children[0].textContent, "Aktiv");
 assert.strictEqual(
     statusHeader.children[1].children[0].textContent,
-    "1 posted, 2 duplicates, 0 failed"
+    "1 veröffentlicht, 2 Duplikate, 0 fehlgeschlagen"
 );
 assert.strictEqual(
     statusHeader.children[1].children[1].textContent,

@@ -11,8 +11,197 @@
     var appConnection;
     var connected = false;
     var editingFeedId = null;
+    var language = "de";
+
+    var translations = {
+        de: {
+            pageTitle: "RSS Feed Connector",
+            logoAlt: "Connect mit RSS",
+            gateUnauthorized: "Nicht autorisiert",
+            gateUnavailable: "Diese Oberfläche ist nur über myApps verfügbar. Bitte öffne die App über deinen myApps App Drawer.",
+            gateCheckingTitle: "Verbindung wird geprüft",
+            gateChecking: "Die myApps-Anmeldung wird überprüft …",
+            gateConnectionFailed: "myApps-Verbindung fehlgeschlagen",
+            gateConnectionError: "Die Anmeldung konnte nicht bestätigt werden. Prüfe die Verbindung und App-Berechtigungen. Fehler: {error}",
+            gateDisconnected: "Verbindung getrennt",
+            gateDisconnectedMessage: "Die myApps-Verbindung wurde getrennt. Bitte öffne die App erneut über deinen myApps App Drawer.",
+            appEyebrow: "CONNECT · FEED-VERWALTUNG",
+            appSubtitle: "Feeds verwalten und automatisch in Connect veröffentlichen.",
+            connectionConnecting: "Verbinde …",
+            connectionConnected: "Verbunden",
+            identityPanel: "Plattform-Identität",
+            identityUserLabel: "Angemeldet als",
+            identityAppLabel: "myApps-App",
+            identityDescription: "Domain und App-Identität werden von myApps bereitgestellt.",
+            signedIn: "Angemeldet",
+            configuration: "KONFIGURATION",
+            addFeed: "Feed hinzufügen",
+            editFeed: "Feed bearbeiten",
+            saveChanges: "Änderungen speichern",
+            cancel: "Abbrechen",
+            feedName: "Feed-Name",
+            feedNamePlaceholder: "z. B. Heise Security",
+            feedUrl: "Feed-URL",
+            feedTopic: "Connect-Zone / Topic",
+            loadingTopics: "Topics werden geladen …",
+            feedTags: "Tags",
+            feedTagsPlaceholder: "security, heise",
+            intervalMinutes: "Abrufintervall (Minuten)",
+            initialPostLimit: "Beiträge beim ersten Abruf (max. 50)",
+            feedEnabled: "Feed aktiv",
+            loadAllPosts: "Alle vorhandenen Beiträge laden",
+            overview: "ÜBERSICHT",
+            feedsHeading: "Deine Feeds",
+            refresh: "Aktualisieren",
+            loadingFeeds: "Lade Feed-Konfiguration …",
+            chooseTopic: "Connect-Zone auswählen …",
+            noTopics: "Keine Connect-Zonen verfügbar",
+            noFeeds: "Noch keine Feeds konfiguriert. Füge oben deinen ersten RSS- oder Atom-Feed hinzu.",
+            topicPrefix: "Topic: {topic}",
+            intervalChip: "Alle {minutes} Min.",
+            active: "Aktiv",
+            paused: "Pausiert",
+            waitingFirstRun: "Wartet auf den ersten Abruf",
+            lastRun: "Letzter Abruf: {time}",
+            runNow: "Jetzt abrufen",
+            edit: "Bearbeiten",
+            delete: "Löschen",
+            confirmDelete: "Löschen bestätigen",
+            retry: "Erneut versuchen",
+            connectionUnavailable: "Die Verbindung zur App Platform ist nicht verfügbar.",
+            requestSendFailed: "Anfrage konnte nicht gesendet werden: {error}",
+            requestFailed: "Die Anfrage ist fehlgeschlagen.",
+            feedSaved: "Feed gespeichert.",
+            feedDeleted: "Feed gelöscht.",
+            feedAlreadyDeleted: "Feed war bereits gelöscht.",
+            feedRunStarted: "Feed-Abruf gestartet.",
+            topicLoadError: "Feed-Konfiguration geladen, aber Connect-Topics konnten nicht gelesen werden: {error}",
+            feedDisabledStatus: "Feed ist deaktiviert",
+            messagesUnavailableStatus: "Messages API ist nicht bereit",
+            topicUnavailableStatus: "Connect-Topic ist nicht zugänglich",
+            interruptedStatus: "Vorheriger Feed-Abruf wurde durch einen Service-Neustart unterbrochen",
+            messagesConnectionUnavailableStatus: "Verbindung zur Messages API ist nicht bereit",
+            downloadingStatus: "Feed wird heruntergeladen",
+            postSummary: "{posted} veröffentlicht, {duplicates} Duplikate, {failed} fehlgeschlagen",
+            postSummaryWithSkipped: "{posted} veröffentlicht, {duplicates} Duplikate, {skipped} ältere Beiträge übersprungen, {failed} fehlgeschlagen"
+        },
+        en: {
+            pageTitle: "RSS Feed Connector",
+            logoAlt: "Connect with RSS",
+            gateUnauthorized: "Not authorized",
+            gateUnavailable: "This interface is only available through myApps. Please open the app from your myApps app drawer.",
+            gateCheckingTitle: "Checking connection",
+            gateChecking: "Verifying the myApps sign-in …",
+            gateConnectionFailed: "myApps connection failed",
+            gateConnectionError: "The sign-in could not be verified. Check the connection and app permissions. Error: {error}",
+            gateDisconnected: "Connection lost",
+            gateDisconnectedMessage: "The myApps connection was lost. Please reopen the app from your myApps app drawer.",
+            appEyebrow: "CONNECT · FEED MANAGEMENT",
+            appSubtitle: "Manage feeds and automatically publish them to Connect.",
+            connectionConnecting: "Connecting …",
+            connectionConnected: "Connected",
+            identityPanel: "Platform identity",
+            identityUserLabel: "Signed in as",
+            identityAppLabel: "myApps app",
+            identityDescription: "The domain and app identity are provided by myApps.",
+            signedIn: "Signed in",
+            configuration: "CONFIGURATION",
+            addFeed: "Add feed",
+            editFeed: "Edit feed",
+            saveChanges: "Save changes",
+            cancel: "Cancel",
+            feedName: "Feed name",
+            feedNamePlaceholder: "e.g. Heise Security",
+            feedUrl: "Feed URL",
+            feedTopic: "Connect zone / topic",
+            loadingTopics: "Loading topics …",
+            feedTags: "Tags",
+            feedTagsPlaceholder: "security, heise",
+            intervalMinutes: "Polling interval (minutes)",
+            initialPostLimit: "Posts on first fetch (max. 50)",
+            feedEnabled: "Feed enabled",
+            loadAllPosts: "Load all existing posts",
+            overview: "OVERVIEW",
+            feedsHeading: "Your feeds",
+            refresh: "Refresh",
+            loadingFeeds: "Loading feed configuration …",
+            chooseTopic: "Select a Connect zone …",
+            noTopics: "No Connect zones available",
+            noFeeds: "No feeds configured yet. Add your first RSS or Atom feed above.",
+            topicPrefix: "Topic: {topic}",
+            intervalChip: "Every {minutes} min",
+            active: "Active",
+            paused: "Paused",
+            waitingFirstRun: "Waiting for the first fetch",
+            lastRun: "Last fetch: {time}",
+            runNow: "Fetch now",
+            edit: "Edit",
+            delete: "Delete",
+            confirmDelete: "Confirm delete",
+            retry: "Try again",
+            connectionUnavailable: "The connection to the App Platform is unavailable.",
+            requestSendFailed: "Could not send request: {error}",
+            requestFailed: "The request failed.",
+            feedSaved: "Feed saved.",
+            feedDeleted: "Feed deleted.",
+            feedAlreadyDeleted: "Feed was already deleted.",
+            feedRunStarted: "Feed fetch started.",
+            topicLoadError: "Feed configuration loaded, but Connect topics could not be read: {error}",
+            feedDisabledStatus: "Feed is disabled",
+            messagesUnavailableStatus: "Messages API is not ready",
+            topicUnavailableStatus: "Connect topic is not accessible",
+            interruptedStatus: "Previous feed cycle was interrupted by a service restart",
+            messagesConnectionUnavailableStatus: "Messages API connection is not ready",
+            downloadingStatus: "Downloading feed",
+            postSummary: "{posted} posted, {duplicates} duplicates, {failed} failed",
+            postSummaryWithSkipped: "{posted} posted, {duplicates} duplicates, {skipped} older entries skipped, {failed} failed"
+        }
+    };
+
+    var staticTranslations = {
+        "page-title": "pageTitle",
+        "brand-logo": "logoAlt",
+        "access-gate-heading": "gateUnauthorized",
+        "access-gate-message": "gateUnavailable",
+        "app-eyebrow": "appEyebrow",
+        "app-subtitle": "appSubtitle",
+        "connection-status": "connectionConnecting",
+        "identity-user-label": "identityUserLabel",
+        "identity-app-label": "identityAppLabel",
+        "identity-description": "identityDescription",
+        "configuration-eyebrow": "configuration",
+        "form-heading": "addFeed",
+        "cancel-edit": "cancel",
+        "feed-name-label": "feedName",
+        "feed-url-label": "feedUrl",
+        "feed-topic-label": "feedTopic",
+        "feed-topic-loading": "loadingTopics",
+        "feed-tags-label": "feedTags",
+        "feed-interval-label": "intervalMinutes",
+        "feed-initial-post-limit-label": "initialPostLimit",
+        "feed-enabled-label": "feedEnabled",
+        "feed-initial-post-all-label": "loadAllPosts",
+        "save-feed": "addFeed",
+        "overview-eyebrow": "overview",
+        "feeds-heading": "feedsHeading",
+        "refresh": "refresh",
+        "feed-list-loading": "loadingFeeds"
+    };
+
+    var placeholders = {
+        "feed-name": "feedNamePlaceholder",
+        "feed-tags": "feedTagsPlaceholder"
+    };
+
+    var translatedAttributes = {
+        "identity-panel": {
+            attribute: "aria-label",
+            key: "identityPanel"
+        }
+    };
 
     function initialize(appStart) {
+        applyLanguage(appStart && appStart.lang);
         applyScheme(appStart && appStart.scheme);
         if (appStart && appStart.onschemechanged &&
             typeof appStart.onschemechanged.attach === "function") {
@@ -26,13 +215,13 @@
             !innovaphone.appwebsocket ||
             typeof innovaphone.appwebsocket.Connection !== "function") {
             setAccessState(
-                "Nicht autorisiert",
-                "Diese Oberfläche ist nur über myApps verfügbar. Bitte öffne die App über deinen myApps App Drawer."
+                text("gateUnauthorized"),
+                text("gateUnavailable")
             );
             return;
         }
 
-        setAccessState("Verbindung wird geprüft", "Die myApps-Anmeldung wird überprüft …");
+        setAccessState(text("gateCheckingTitle"), text("gateChecking"));
         document.getElementById("identity-app").textContent = appStart.name;
         appConnection = new innovaphone.appwebsocket.Connection(appStart.url, appStart.name);
         appConnection.onconnected = function (domain, user, displayName) {
@@ -44,8 +233,8 @@
                 identity += (identity ? "@" : "") + domain;
             }
             document.getElementById("identity-user").textContent =
-                displayName ? displayName + " (" + identity + ")" : identity || "Angemeldet";
-            setConnectionStatus("Verbunden", "connected");
+                displayName ? displayName + " (" + identity + ")" : identity || text("signedIn");
+            setConnectionStatus(text("connectionConnected"), "connected");
             requestState();
             if (refreshTimer === null) {
                 refreshTimer = window.setInterval(requestState, 15000);
@@ -55,17 +244,16 @@
         appConnection.onerror = function (error) {
             connected = false;
             setAccessState(
-                "myApps-Verbindung fehlgeschlagen",
-                "Die Anmeldung konnte nicht bestätigt werden. Prüfe die Verbindung und App-Berechtigungen. Fehler: " +
-                    error
+                text("gateConnectionFailed"),
+                text("gateConnectionError", { error: error })
             );
         };
         appConnection.onclosed = function () {
             if (connected) {
                 document.getElementById("app-shell").hidden = true;
                 setAccessState(
-                    "Verbindung getrennt",
-                    "Die myApps-Verbindung wurde getrennt. Bitte öffne die App erneut über deinen myApps App Drawer."
+                    text("gateDisconnected"),
+                    text("gateDisconnectedMessage")
                 );
             }
             connected = false;
@@ -85,7 +273,7 @@
 
     function sendRequest(message, callback) {
         if (!connected) {
-            showNotice("Die Verbindung zur App Platform ist nicht verfügbar.", "error");
+            showNotice(text("connectionUnavailable"), "error");
             return false;
         }
         requestNumber++;
@@ -101,7 +289,7 @@
         }
         catch (error) {
             delete pendingRequests[sourceId];
-            showNotice("Anfrage konnte nicht gesendet werden: " + error, "error");
+            showNotice(text("requestSendFailed", { error: error }), "error");
             return false;
         }
     }
@@ -113,7 +301,7 @@
         }
 
         if (message.mt === "ApiError") {
-            showNotice(message.error || "Die Anfrage ist fehlgeschlagen.", "error");
+            showNotice(message.error || text("requestFailed"), "error");
             if (callback) {
                 callback(message);
             }
@@ -125,15 +313,15 @@
         }
         else if (message.mt === "FeedSaved") {
             resetForm();
-            showNotice("Feed gespeichert.");
+            showNotice(text("feedSaved"));
             requestState();
         }
         else if (message.mt === "FeedDeleted") {
-            showNotice(message.removed ? "Feed gelöscht." : "Feed war bereits gelöscht.");
+            showNotice(message.removed ? text("feedDeleted") : text("feedAlreadyDeleted"));
             requestState();
         }
         else if (message.mt === "FeedRunStarted") {
-            showNotice("Feed-Abruf gestartet.");
+            showNotice(text("feedRunStarted"));
             window.setTimeout(requestState, 1000);
         }
 
@@ -155,8 +343,7 @@
 
         if (state.topicError) {
             showNotice(
-                "Feed-Konfiguration geladen, aber Connect-Topics konnten nicht gelesen werden: " +
-                state.topicError,
+                text("topicLoadError", { error: state.topicError }),
                 "error"
             );
         }
@@ -172,7 +359,7 @@
         addOption(
             topicSelect,
             "",
-            connectTopics.length ? "Connect-Zone auswählen …" : "Keine Connect-Zonen verfügbar"
+            connectTopics.length ? text("chooseTopic") : text("noTopics")
         );
         connectTopics.forEach(function (topic) {
             var label = topic.dn ? topic.dn + " — " + topic.sip : topic.sip;
@@ -198,12 +385,79 @@
         );
     }
 
+    function applyLanguage(startLanguage) {
+        language = typeof startLanguage === "string" &&
+            /^en(?:-|$)/i.test(startLanguage) ? "en" : "de";
+        var strings = translations[language];
+        document.documentElement.lang = language;
+        Object.keys(staticTranslations).forEach(function (id) {
+            var element = document.getElementById(id);
+            if (id === "brand-logo") {
+                element.alt = strings[staticTranslations[id]];
+            }
+            else {
+                element.textContent = strings[staticTranslations[id]];
+            }
+        });
+        Object.keys(placeholders).forEach(function (id) {
+            document.getElementById(id).setAttribute(
+                "placeholder",
+                strings[placeholders[id]]
+            );
+        });
+        Object.keys(translatedAttributes).forEach(function (id) {
+            var translation = translatedAttributes[id];
+            document.getElementById(id).setAttribute(
+                translation.attribute,
+                strings[translation.key]
+            );
+        });
+    }
+
+    function text(key, values) {
+        var value = translations[language][key];
+        if (typeof value !== "string") {
+            throw new Error("Missing UI translation: " + key);
+        }
+        Object.keys(values || {}).forEach(function (name) {
+            value = value.replace("{" + name + "}", String(values[name]));
+        });
+        return value;
+    }
+
+    function translateStatusSummary(summary) {
+        var exactTranslations = {
+            "Waiting for first feed cycle": "waitingFirstRun",
+            "Feed is disabled": "feedDisabledStatus",
+            "Messages API is not ready": "messagesUnavailableStatus",
+            "Connect topic is not accessible": "topicUnavailableStatus",
+            "Previous feed cycle was interrupted by service restart": "interruptedStatus",
+            "Messages API connection is not ready": "messagesConnectionUnavailableStatus",
+            "Downloading feed": "downloadingStatus"
+        };
+        if (exactTranslations[summary]) {
+            return text(exactTranslations[summary]);
+        }
+        var counts = summary && summary.match(
+            /^(\d+) posted, (\d+) duplicates, (?:(\d+) older entries skipped, )?(\d+) failed$/
+        );
+        if (counts) {
+            return text(counts[3] ? "postSummaryWithSkipped" : "postSummary", {
+                posted: counts[1],
+                duplicates: counts[2],
+                skipped: counts[3],
+                failed: counts[4]
+            });
+        }
+        return summary;
+    }
+
     function renderFeeds(feeds, statuses) {
         clearChildren(feedList);
         if (feeds.length === 0) {
             var empty = document.createElement("div");
             empty.className = "empty-state";
-            empty.textContent = "Noch keine Feeds konfiguriert. Füge oben deinen ersten RSS- oder Atom-Feed hinzu.";
+            empty.textContent = text("noFeeds");
             feedList.appendChild(empty);
             return;
         }
@@ -237,8 +491,8 @@
 
         var meta = document.createElement("div");
         meta.className = "feed-meta";
-        addChip(meta, "Topic: " + feed.topic);
-        addChip(meta, "Alle " + feed.intervalMinutes + " Min.");
+        addChip(meta, text("topicPrefix", { topic: feed.topic }));
+        addChip(meta, text("intervalChip", { minutes: feed.intervalMinutes }));
         (feed.tags || []).forEach(function (tag) {
             var tagElement = document.createElement("span");
             tagElement.className = "tag";
@@ -255,13 +509,13 @@
         var enabled = document.createElement("span");
         enabled.className = "feed-enabled";
         enabled.setAttribute("data-enabled", feed.enabled ? "true" : "false");
-        enabled.textContent = feed.enabled ? "Aktiv" : "Pausiert";
+        enabled.textContent = feed.enabled ? text("active") : text("paused");
         statusHeader.appendChild(enabled);
 
         var statusDetails = document.createElement("div");
         statusDetails.className = "feed-status";
         statusDetails.setAttribute("data-state", status ? status.state : "waiting");
-        var statusText = status ? status.summary : "Wartet auf den ersten Abruf";
+        var statusText = status ? translateStatusSummary(status.summary) : text("waitingFirstRun");
         var summary = document.createElement("span");
         summary.className = "feed-status-summary";
         summary.textContent = statusText;
@@ -269,7 +523,7 @@
         if (status && status.lastRun) {
             var lastRun = document.createElement("span");
             lastRun.className = "feed-last-run";
-            lastRun.textContent = "Letzter Abruf: " + status.lastRun;
+            lastRun.textContent = text("lastRun", { time: status.lastRun });
             statusDetails.appendChild(lastRun);
         }
         statusHeader.appendChild(statusDetails);
@@ -277,20 +531,20 @@
 
         var actions = document.createElement("div");
         actions.className = "feed-actions";
-        var runButton = makeButton("Jetzt abrufen", "button button-primary", function () {
+        var runButton = makeButton(text("runNow"), "button button-primary", function () {
             sendRequest({ mt: "RunFeed", feedId: feed.id });
         });
         runButton.disabled = !feed.enabled;
         actions.appendChild(runButton);
-        actions.appendChild(makeButton("Bearbeiten", "button button-quiet", function () {
+        actions.appendChild(makeButton(text("edit"), "button button-quiet", function () {
             editFeed(feed);
         }));
         var deleteConfirmed = false;
         var cancelDeleteButton;
-        var deleteButton = makeButton("Löschen", "button button-danger", function () {
+        var deleteButton = makeButton(text("delete"), "button button-danger", function () {
             if (!deleteConfirmed) {
                 deleteConfirmed = true;
-                deleteButton.textContent = "Löschen bestätigen";
+                deleteButton.textContent = text("confirmDelete");
                 cancelDeleteButton.hidden = false;
                 return;
             }
@@ -303,7 +557,7 @@
                     if (response.mt === "ApiError") {
                         deleteButton.disabled = false;
                         cancelDeleteButton.disabled = false;
-                        deleteButton.textContent = "Erneut versuchen";
+                        deleteButton.textContent = text("retry");
                     }
                 }
             );
@@ -312,10 +566,10 @@
                 cancelDeleteButton.disabled = false;
             }
         });
-        cancelDeleteButton = makeButton("Abbrechen", "button button-quiet", function () {
+        cancelDeleteButton = makeButton(text("cancel"), "button button-quiet", function () {
             deleteConfirmed = false;
             deleteButton.disabled = false;
-            deleteButton.textContent = "Löschen";
+            deleteButton.textContent = text("delete");
             cancelDeleteButton.hidden = true;
         });
         cancelDeleteButton.hidden = true;
@@ -366,8 +620,8 @@
         document.getElementById("feed-initial-post-limit").disabled =
             feed.initialPostAll === true;
         topicSelect.value = feed.topic;
-        document.getElementById("form-heading").textContent = "Feed bearbeiten";
-        document.getElementById("save-feed").textContent = "Änderungen speichern";
+        document.getElementById("form-heading").textContent = text("editFeed");
+        document.getElementById("save-feed").textContent = text("saveChanges");
         document.getElementById("cancel-edit").hidden = false;
         feedForm.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -380,8 +634,8 @@
         document.getElementById("feed-initial-post-limit").value = "5";
         document.getElementById("feed-initial-post-all").checked = false;
         document.getElementById("feed-initial-post-limit").disabled = false;
-        document.getElementById("form-heading").textContent = "Feed hinzufügen";
-        document.getElementById("save-feed").textContent = "Feed hinzufügen";
+        document.getElementById("form-heading").textContent = text("addFeed");
+        document.getElementById("save-feed").textContent = text("addFeed");
         document.getElementById("cancel-edit").hidden = true;
     }
 
@@ -444,8 +698,8 @@
     }
     else {
         setAccessState(
-            "Nicht autorisiert",
-            "Diese Oberfläche ist nur über myApps verfügbar. Bitte öffne die App über deinen myApps App Drawer."
+            text("gateUnauthorized"),
+            text("gateUnavailable")
         );
     }
 }());

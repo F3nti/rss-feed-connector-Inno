@@ -21,7 +21,7 @@ var appLogo = fs.readFileSync(path.join(
 assert(appLogo.indexOf('viewBox="32 32 448 448"') !== -1);
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "build.txt"), "utf8").trim(),
-    "9"
+    "10"
 );
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "label.txt"), "utf8").trim(),
@@ -38,6 +38,31 @@ assert(html.indexOf('src="web1/appwebsocket/innovaphone.appwebsocket.Connection.
 assert(html.indexOf('src="rss-connect-logo.svg"') !== -1);
 assert(html.indexOf('id="access-gate"') !== -1);
 assert(html.indexOf('id="app-shell" class="app" hidden') !== -1);
+[
+    "page-title",
+    "brand-logo",
+    "app-eyebrow",
+    "app-subtitle",
+    "identity-panel",
+    "identity-user-label",
+    "identity-app-label",
+    "identity-description",
+    "configuration-eyebrow",
+    "feed-name-label",
+    "feed-url-label",
+    "feed-topic-label",
+    "feed-topic-loading",
+    "feed-tags-label",
+    "feed-interval-label",
+    "feed-initial-post-limit-label",
+    "feed-enabled-label",
+    "feed-initial-post-all-label",
+    "overview-eyebrow",
+    "feeds-heading",
+    "feed-list-loading"
+].forEach(function (id) {
+    assert(html.indexOf('id="' + id + '"') !== -1, "Missing localized element: " + id);
+});
 assert(fs.existsSync(path.join(__dirname, "..", "httpfiles", "web1", "lib1", "innovaphone.lib1.js")));
 assert(fs.existsSync(path.join(
     __dirname,
@@ -51,9 +76,31 @@ assert(fs.existsSync(path.join(
 var elements = {};
 var topicOptions = [];
 [
+    "page-title",
+    "brand-logo",
     "access-gate",
     "access-gate-heading",
     "access-gate-message",
+    "app-eyebrow",
+    "app-subtitle",
+    "connection-status",
+    "identity-panel",
+    "identity-user-label",
+    "identity-app-label",
+    "identity-description",
+    "configuration-eyebrow",
+    "feed-name-label",
+    "feed-url-label",
+    "feed-topic-label",
+    "feed-topic-loading",
+    "feed-tags-label",
+    "feed-interval-label",
+    "feed-initial-post-limit-label",
+    "feed-enabled-label",
+    "feed-initial-post-all-label",
+    "overview-eyebrow",
+    "feeds-heading",
+    "feed-list-loading",
     "app-shell",
     "feed-form",
     "feed-list",
@@ -76,15 +123,25 @@ var topicOptions = [];
     "form-heading"
 ].forEach(function (id) {
     elements[id] = {
+        children: [],
         listeners: {},
+        attributes: {},
         addEventListener: function (name, callback) {
             this.listeners[name] = callback;
         },
-        setAttribute: function () {},
+        setAttribute: function (name, value) {
+            this.attributes[name] = value;
+        },
         removeAttribute: function () {},
         getAttribute: function () { return ""; },
-        appendChild: function () {},
-        removeChild: function () {},
+        appendChild: function (child) {
+            this.children.push(child);
+            this.firstChild = this.children[0] || null;
+        },
+        removeChild: function (child) {
+            this.children.splice(this.children.indexOf(child), 1);
+            this.firstChild = this.children[0] || null;
+        },
         scrollIntoView: function () {},
         reset: function () {},
         textContent: "",
@@ -123,7 +180,11 @@ var context = {
         createElement: function (tagName) {
             return {
                 tagName: tagName,
-                appendChild: function () {},
+                children: [],
+                appendChild: function (child) {
+                    this.children.push(child);
+                    this.firstChild = this.children[0] || null;
+                },
                 addEventListener: function () {},
                 setAttribute: function () {},
                 textContent: "",
@@ -161,14 +222,22 @@ vm.runInNewContext(
     context
 );
 assert.strictEqual(typeof startCallback, "function");
+startCallback({ lang: "en-US" });
+assert.strictEqual(elements["access-gate-heading"].textContent, "Not authorized");
+assert.strictEqual(elements["app-subtitle"].textContent, "Manage feeds and automatically publish them to Connect.");
+assert.strictEqual(elements["identity-panel"].attributes["aria-label"], "Platform identity");
+assert.strictEqual(elements["feed-name"].attributes.placeholder, "e.g. Heise Security");
+assert.strictEqual(context.document.documentElement.lang, "en");
 startCallback({});
 assert.strictEqual(elements["access-gate"].hidden, false);
 assert.strictEqual(elements["access-gate-heading"].textContent, "Nicht autorisiert");
 assert.strictEqual(elements["app-shell"].hidden, true);
+assert.strictEqual(context.document.documentElement.lang, "de");
 assert.strictEqual(createdConnection, undefined);
 var appStart = {
     url: "wss://app.example/app",
     name: "rss-feed-connector",
+    lang: "de",
     scheme: "dark",
     onschemechanged: {
         attach: function (callback) {
@@ -246,5 +315,45 @@ assert.strictEqual(elements["access-gate"].hidden, false);
 assert.strictEqual(elements["access-gate-heading"].textContent, "myApps-Verbindung fehlgeschlagen");
 assert.strictEqual(elements["access-gate-message"].textContent.indexOf("authentication failed") !== -1, true);
 assert.strictEqual(elements["app-shell"].hidden, true);
+
+startCallback({
+    url: "wss://app.example/app",
+    name: "rss-feed-connector",
+    lang: "en-GB"
+});
+createdConnection.onconnected("example.com", "admin", "Admin");
+createdConnection.onmessage({
+    mt: "State",
+    topics: [{ sip: "connect?team@example.com", dn: "Team" }],
+    feeds: [{
+        id: 21,
+        name: "English feed",
+        url: "https://example.com/feed.xml",
+        topic: "connect?team@example.com",
+        tags: [],
+        intervalMinutes: 30,
+        enabled: true
+    }],
+    statuses: {
+        "21": {
+            state: "success",
+            summary: "2 posted, 1 duplicates, 3 older entries skipped, 0 failed",
+            lastRun: "2026-11-04T12:00:00.000Z"
+        }
+    }
+});
+assert.strictEqual(elements["save-feed"].textContent, "Add feed");
+var englishCard = elements["feed-list"].children[0];
+assert.strictEqual(englishCard.children[1].children[0].children[0].textContent, "Active");
+assert.strictEqual(
+    englishCard.children[1].children[0].children[1].children[0].textContent,
+    "2 posted, 1 duplicates, 3 older entries skipped, 0 failed"
+);
+assert.deepStrictEqual(
+    englishCard.children[1].children[1].children.map(function (button) {
+        return button.textContent;
+    }),
+    ["Fetch now", "Edit", "Delete", "Cancel"]
+);
 
 console.log("myApps UI startup tests passed");

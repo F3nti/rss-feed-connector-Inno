@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>RSS Feed Connector</title>
+    <title id="page-title">RSS Feed Connector</title>
     <link rel="stylesheet" href="rss-feed-connector.css">
     <script src="web1/lib1/innovaphone.lib1.js"></script>
     <script src="web1/appwebsocket/innovaphone.appwebsocket.Connection.js"></script>
@@ -21,26 +21,26 @@
     <main id="app-shell" class="app" hidden>
         <header class="app-header">
             <div class="brand">
-                <img class="brand-logo" src="rss-connect-logo.svg" alt="Connect mit RSS">
+                <img id="brand-logo" class="brand-logo" src="rss-connect-logo.svg" alt="Connect mit RSS">
                 <div>
-                    <p class="eyebrow">CONNECT · FEED-VERWALTUNG</p>
-                    <h1>RSS Feed Connector</h1>
-                    <p class="subtitle">Feeds verwalten und automatisch in Connect veröffentlichen.</p>
+                    <p id="app-eyebrow" class="eyebrow">CONNECT · FEED-VERWALTUNG</p>
+                    <h1 id="app-heading">RSS Feed Connector</h1>
+                    <p id="app-subtitle" class="subtitle">Feeds verwalten und automatisch in Connect veröffentlichen.</p>
                 </div>
             </div>
             <div id="connection-status" class="connection-status" role="status">Verbinde …</div>
         </header>
 
-        <section class="identity-panel" aria-label="Plattform-Identität">
+        <section id="identity-panel" class="identity-panel" aria-label="Plattform-Identität">
             <div>
-                <span class="field-label">Angemeldet als</span>
+                <span id="identity-user-label" class="field-label">Angemeldet als</span>
                 <strong id="identity-user">–</strong>
             </div>
             <div>
-                <span class="field-label">myApps-App</span>
+                <span id="identity-app-label" class="field-label">myApps-App</span>
                 <strong id="identity-app">–</strong>
             </div>
-            <p>Domain und App-Identität werden von myApps bereitgestellt.</p>
+            <p id="identity-description">Domain und App-Identität werden von myApps bereitgestellt.</p>
         </section>
 
         <div id="notice" class="notice" role="status" hidden></div>
@@ -48,7 +48,7 @@
         <section class="panel">
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow">KONFIGURATION</p>
+                    <p id="configuration-eyebrow" class="eyebrow">KONFIGURATION</p>
                     <h2 id="form-heading">Feed hinzufügen</h2>
                 </div>
                 <button id="cancel-edit" class="button button-quiet" type="button" hidden>Abbrechen</button>
@@ -57,38 +57,38 @@
                 <input id="feed-id" type="hidden">
                 <div class="form-grid">
                     <label>
-                        Feed-Name
+                        <span id="feed-name-label">Feed-Name</span>
                         <input id="feed-name" name="name" type="text" maxlength="128" required placeholder="z. B. Heise Security">
                     </label>
                     <label>
-                        Feed-URL
+                        <span id="feed-url-label">Feed-URL</span>
                         <input id="feed-url" name="url" type="url" maxlength="2048" required placeholder="https://example.com/feed.xml">
                     </label>
                     <label>
-                        Connect-Zone / Topic
+                        <span id="feed-topic-label">Connect-Zone / Topic</span>
                         <select id="feed-topic" name="topic" required>
-                            <option value="">Topics werden geladen …</option>
+                            <option id="feed-topic-loading" value="">Topics werden geladen …</option>
                         </select>
                     </label>
                     <label>
-                        Tags
+                        <span id="feed-tags-label">Tags</span>
                         <input id="feed-tags" name="tags" type="text" placeholder="security, heise">
                     </label>
                     <label>
-                        Abrufintervall (Minuten)
+                        <span id="feed-interval-label">Abrufintervall (Minuten)</span>
                         <input id="feed-interval" name="interval" type="number" min="1" max="1440" step="1" value="15" required>
                     </label>
                     <label>
-                        Beiträge beim ersten Abruf (max. 50)
+                        <span id="feed-initial-post-limit-label">Beiträge beim ersten Abruf (max. 50)</span>
                         <input id="feed-initial-post-limit" name="initial-post-limit" type="number" min="1" max="50" step="1" value="5" required>
                     </label>
                     <label class="checkbox-field">
                         <input id="feed-enabled" name="enabled" type="checkbox" checked>
-                        <span>Feed aktiv</span>
+                        <span id="feed-enabled-label">Feed aktiv</span>
                     </label>
                     <label class="checkbox-field">
                         <input id="feed-initial-post-all" name="initial-post-all" type="checkbox">
-                        <span>Alle vorhandenen Beiträge laden</span>
+                        <span id="feed-initial-post-all-label">Alle vorhandenen Beiträge laden</span>
                     </label>
                 </div>
                 <div class="form-actions">
@@ -100,13 +100,13 @@
         <section class="feeds-section">
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow">ÜBERSICHT</p>
-                    <h2>Deine Feeds</h2>
+                    <p id="overview-eyebrow" class="eyebrow">ÜBERSICHT</p>
+                    <h2 id="feeds-heading">Deine Feeds</h2>
                 </div>
                 <button id="refresh" class="button button-quiet" type="button">Aktualisieren</button>
             </div>
             <div id="feed-list" class="feed-list" aria-live="polite">
-                <div class="empty-state">Lade Feed-Konfiguration …</div>
+                <div id="feed-list-loading" class="empty-state">Lade Feed-Konfiguration …</div>
             </div>
         </section>
     </main>

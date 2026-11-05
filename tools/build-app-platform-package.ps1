@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$SdkRoot,
-    [string]$Version = "0.3.0-rc.1"
+    [string]$Version = "0.3.0-rc.1.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,7 +15,7 @@ $workRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
 )
 
 if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+-[a-zA-Z0-9.-]+$') {
-    throw "Version must use semantic version prerelease format, for example 0.3.0-rc.1"
+    throw "Version must use semantic version prerelease format, for example 0.3.0-rc.1.1"
 }
 
 $httpStage = Join-Path $workRoot "httpfiles"
@@ -93,8 +93,8 @@ try {
 
     $build = (Get-Content -Raw (Join-Path $httpStage "build.txt")).Trim()
     $label = (Get-Content -Raw (Join-Path $httpStage "label.txt")).Trim()
-    if ($build -ne "9" -or $label -ne "rc") {
-        throw "Expected HTTP build 9 with label rc; got build '$build', label '$label'"
+    if ($build -ne "10" -or $label -ne "rc") {
+        throw "Expected HTTP build 10 with label rc; got build '$build', label '$label'"
     }
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
