@@ -11,7 +11,7 @@
     var appConnection;
     var connected = false;
     var editingFeedId = null;
-    var language = "de";
+    var language = "en";
 
     var translations = {
         de: {
@@ -387,7 +387,7 @@
 
     function applyLanguage(startLanguage) {
         language = typeof startLanguage === "string" &&
-            /^en(?:-|$)/i.test(startLanguage) ? "en" : "de";
+            /^de(?:-|$)/i.test(startLanguage) ? "de" : "en";
         var strings = translations[language];
         document.documentElement.lang = language;
         Object.keys(staticTranslations).forEach(function (id) {

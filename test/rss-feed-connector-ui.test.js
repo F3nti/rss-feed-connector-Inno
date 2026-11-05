@@ -21,7 +21,7 @@ var appLogo = fs.readFileSync(path.join(
 assert(appLogo.indexOf('viewBox="32 32 448 448"') !== -1);
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "build.txt"), "utf8").trim(),
-    "10"
+    "11"
 );
 assert.strictEqual(
     fs.readFileSync(path.join(__dirname, "..", "httpfiles", "label.txt"), "utf8").trim(),
@@ -230,8 +230,14 @@ assert.strictEqual(elements["feed-name"].attributes.placeholder, "e.g. Heise Sec
 assert.strictEqual(context.document.documentElement.lang, "en");
 startCallback({});
 assert.strictEqual(elements["access-gate"].hidden, false);
-assert.strictEqual(elements["access-gate-heading"].textContent, "Nicht autorisiert");
+assert.strictEqual(elements["access-gate-heading"].textContent, "Not authorized");
 assert.strictEqual(elements["app-shell"].hidden, true);
+assert.strictEqual(context.document.documentElement.lang, "en");
+startCallback({ lang: "fr-FR" });
+assert.strictEqual(elements["access-gate-heading"].textContent, "Not authorized");
+assert.strictEqual(context.document.documentElement.lang, "en");
+startCallback({ lang: "de-DE" });
+assert.strictEqual(elements["access-gate-heading"].textContent, "Nicht autorisiert");
 assert.strictEqual(context.document.documentElement.lang, "de");
 assert.strictEqual(createdConnection, undefined);
 var appStart = {

@@ -168,30 +168,30 @@ assert.strictEqual(card.children[0].className, "feed-details");
 assert.strictEqual(card.children[1].className, "feed-controls");
 var controls = card.children[1];
 var statusHeader = controls.children[0];
-assert.strictEqual(statusHeader.children[0].textContent, "Aktiv");
+assert.strictEqual(statusHeader.children[0].textContent, "Active");
 assert.strictEqual(
     statusHeader.children[1].children[0].textContent,
-    "1 veröffentlicht, 2 Duplikate, 0 fehlgeschlagen"
+    "1 posted, 2 duplicates, 0 failed"
 );
 assert.strictEqual(
     statusHeader.children[1].children[1].textContent,
-    "Letzter Abruf: 2026-11-02T08:30:00.000Z"
+    "Last fetch: 2026-11-02T08:30:00.000Z"
 );
 var buttons = controls.children[1].children;
 var deleteButton = buttons.filter(function (button) {
-    return button.textContent === "Löschen";
+    return button.textContent === "Delete";
 })[0];
 var cancelButton = buttons.filter(function (button) {
-    return button.textContent === "Abbrechen";
+    return button.textContent === "Cancel";
 })[0];
 
 deleteButton.click();
-assert.strictEqual(deleteButton.textContent, "Löschen bestätigen");
+assert.strictEqual(deleteButton.textContent, "Confirm delete");
 assert.strictEqual(cancelButton.hidden, false);
 assert.strictEqual(sentMessages.length, 1);
 
 cancelButton.click();
-assert.strictEqual(deleteButton.textContent, "Löschen");
+assert.strictEqual(deleteButton.textContent, "Delete");
 assert.strictEqual(cancelButton.hidden, true);
 
 deleteButton.click();
@@ -208,7 +208,7 @@ connection.onmessage({
 });
 assert.strictEqual(deleteButton.disabled, false);
 assert.strictEqual(cancelButton.disabled, false);
-assert.strictEqual(deleteButton.textContent, "Erneut versuchen");
+assert.strictEqual(deleteButton.textContent, "Try again");
 
 connection.onclosed();
 deleteButton.click();
